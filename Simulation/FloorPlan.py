@@ -17,9 +17,9 @@ BLACK = (0,0,0)
 
 H_COMPARTMENT  = 1.0
 W_COMPARTMENT  = 1.0
-N_COMP_X       = 6 ## 3
+N_COMP_X       = 3 ## 3
 N_COMP_Y       = 9
-N_BUFFER_STORE = 1 ##2
+N_BUFFER_STORE = 2 ##2
 W_BUFFER_STORE = N_COMP_X*W_COMPARTMENT
 H_BUFFER_STORE = N_COMP_Y*H_COMPARTMENT
 
@@ -90,9 +90,14 @@ class BufferLane:
             self.store_coord_dict = dict([(r, (mid, self.h1-H_LANE_STORE/2 + r*step)) for r in range(MAX_LANE_STORE)])
 
     def step(self):
-        move = BUFFER_LANE_SPEED*TIME_STEP_S if self.lane<N_LANE/2 else BUFFER_LANE_SPEED*TIME_STEP_S
-        for r, rol in enumerate(self.store):
-            rol.h = min(rol.h+move, self.store_coord_dict[MAX_LANE_STORE-1-r][1])
+        move = BUFFER_LANE_SPEED * TIME_STEP_S
+        if self.lane_up:
+            for r, rol in enumerate(self.store):
+                rol.h = min(rol.h+move, self.store_coord_dict[MAX_LANE_STORE-1-r][1])
+        else:
+            for r, rol in enumerate(self.store):
+                rol.h = max(rol.h-move, self.store_coord_dict[MAX_LANE_STORE-1-r][1])
+
 
     def get_grid_coords(self):
         # return top store
@@ -118,17 +123,13 @@ class BufferLane:
     def store_roll_container(self, rol):
         if len(self.store)>=MAX_LANE_STORE: return
 
-        if not self.lane_up:
-            rol.w, rol.h = self.store_coord_dict[MAX_LANE_STORE-1]
-        else:
-            rol.w, rol.h = self.store_coord_dict[0]
+        rol.w, rol.h = self.store_coord_dict[0]
         rol.o = 1 if self.lane_up else 3
         self.store.append(rol)
 
     def pop_roll_container(self):
-        if len(self.store)<=0:
-            return None
-        return self.store.pop()
+        if len(self.store)>0:
+            return self.store.pop(0)
 
 class BufferStore:
     def __init__(self, dock, buffer):
@@ -162,6 +163,18 @@ class BufferStore:
         self.h1_ext = self.h1 - H_LEFT / 2
         self.h2_ext = self.h2 + (H_FLOOR-self.h2) / 2
 
+        self.store = [[] for row in range(N_COMP_Y)]
+
+    def store_roll_container(self, row, rol):
+        if row>=N_COMP_Y: return
+        if len(self.store[row])>=N_COMP_X: return
+
+        col  = len(self.store[row])
+        rol.w, rol.h = self.get_grid_coords(row=row, col=col)
+        rol.o        = 2
+
+        self.store[row].append(rol)
+
     def get_grid_coords(self, row=-1, col=-1, corner=-1):
         if row<0 or col<0:
             if corner==0: return self.w1_ext, self.h1_ext  # lower left
@@ -190,6 +203,10 @@ class BufferStore:
                 pt2 = floor_plan.pnt_from_coords(w2, h2)
 
                 floor_plan.figure = cv.rectangle(floor_plan.figure, pt1, pt2, BLACK, 1)
+
+        for row in range(N_COMP_Y):
+            for rol in self.store[row]:
+                rol.draw(floor_plan)
 
     def draw_circulation(self, floor_plan):
         # horizontal, to left
@@ -339,10 +356,13 @@ class FloorPlan:
             rob.step()
 
     def draw(self):
-        self.figure       = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)
-        self.figure       = cv.rectangle(self.figure, self.top_left, self.bottom_right, BLACK, 2)
+        self.figure = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)
+        self.figure = cv.rectangle(self.figure, self.top_left, self.bottom_right, BLACK, 2)
 
+        self.draw_grid()
+        self.__draw_legends()
         for dock in range(N_DOCK):
+            self.__draw_circulation(dock)
             for store in range(N_BUFFER_STORE):
                 self.buffer_stores[(dock, store)].draw(self)
 
@@ -350,11 +370,6 @@ class FloorPlan:
             self.parkings[dock].draw(self)
             for lane in range(N_LANE):
                 self.buffer_lanes[(dock, lane)].draw(self)
-
-            self.__draw_circulation(dock)
-
-        self.draw_grid()
-        self.__draw_legends()
 
         for rob in self.robots:
             rob.draw(self)
@@ -532,12 +547,13 @@ class FloorPlan:
     def imshow(self, name):
         cv.imshow(name, self.figure)
 
-class RollContainer():
-    def __init__(self, w, h, orientation, color):
-        self.w   = w
-        self.h   = h
-        self.o   = orientation
-        self.col = color
+class RollContainer:
+    def __init__(self, w, h, orientation, color, shift):
+        self.w     = w
+        self.h     = h
+        self.o     = orientation
+        self.col   = color
+        self.shift = shift
 
     def draw(self, floor_plan):
         w1 = self.w - 0.5*W_ROLL_CONTAINER
@@ -562,6 +578,11 @@ class RollContainer():
             return
 
         floor_plan.figure = cv.circle(floor_plan.figure, pt, 5, (100, 100, 100), -1)
+
+        text = f"{self.shift:d}"
+        font = cv.FONT_HERSHEY_SIMPLEX
+        floor_plan.figure = cv.putText(floor_plan.figure, text, pt1, font, 0.7, BLACK)
+
 
     def rotate(self, left):
         step   = 1 if left else -1
@@ -606,9 +627,16 @@ class Robot:
         self.offset    = 0.
         self.segment   = 0
 
+    def set_coords(self, pos):
+        self.w, self.h = pos
+        if self.rol:
+            self.rol.w, self.rol.h = pos
+            self.rol.o = self.o
+
     def set_path(self, path):
         self.path      = path
-        self.w, self.h = self.path[0]
+        self.set_coords(path[0])
+
         self.offset    = 0.
         self.segment   = 0
         if len(self.path)>1:
@@ -633,7 +661,7 @@ class Robot:
 
             if step_todo<d: # step before segment end point
                 self.offset    += step_todo
-                self.w, self.h  = get_p_offset(self.path[self.segment], self.offset)
+                self.set_coords(get_p_offset(self.path[self.segment], self.offset))
                 return
 
             else: # step beyond segment end point
@@ -644,7 +672,7 @@ class Robot:
 
         self.segment   = len(self.path)  # use this to test whether robot is at end of path
         self.offset    = 0.
-        self.w, self.h = self.path[-1]
+        self.set_coords(self.path[-1])
 
     def is_at_end_point(self):
         return self.segment == len(self.path)
@@ -726,42 +754,55 @@ class Robot:
 
 import random
 def main():
-    fp = FloorPlan()
+    fp = FloorPlan(8)
     fp.draw()
     fp.imshow("Test")
     cv.waitKey(0)
 
     rc_list = []
-    for k in range(10):
+    for t in range(10):
         rr = random.randint(0,255)
         gg = random.randint(0,255)
         bb = random.randint(0,255)
-        rc_list.append( RollContainer(W_FLOOR / 2, H_FLOOR / 2, 3, (rr, gg, bb)))
+        rc_list.append( RollContainer(W_FLOOR / 2, H_FLOOR / 2, 3, (rr, gg, bb), t))
 
     path1   = fp.get_shortest_path(2, 0, parking1=0, buffer_lane2=1)
     path2   = fp.get_shortest_path(0, 3, buffer_lane1=1, store2=0, row2=5)
-    path3   = fp.get_shortest_path(3, 1, store1=0, row1=5, buffer_lane2=3)
+    path3   = fp.get_shortest_path(3, 1, store1=0, row1=5, parking2=3)
 
+    t2 = -1
+    t3 = -1
+    t4 = -1
+    for t in range(800):
+        if t==50:   fp.robots[2].set_path(path1)
+        if t>50 and t2<0 and fp.robots[2].is_at_end_point():
+            t2 = t
+            fp.robots[2].load_roll_container(fp.buffer_lanes[(0,1)].pop_roll_container())
+            fp.robots[2].set_path(path2)
 
-    t = -1
-    for k in range(500):
-        if k==30:   fp.robots[0].set_path(path1)
-        if k>30 and fp.robots[0].is_at_end_point():
-            t=k
-            fp.robots[0].load_roll_container(fp.buffer_lanes[(0,1)].pop_roll_container())
-            fp.robots[0].set_path(path2)
+            fp.robots[1].set_path(fp.get_shortest_path(0, 0, parking1=0, buffer_lane2=1))
 
-        if k>t and fp.robots[0].is_at_end_point():
-            fp.robots[0].unload_roll_container()
-            fp.robots[0].set_path(path3)
+        if t3<0 and fp.robots[2].is_at_end_point():
+            t3 = t
+            fp.buffer_stores[(3, 0)].store_roll_container(5, fp.robots[2].unload_roll_container())
+            fp.robots[2].set_path(path3)
 
-        if k%4==0 and len(rc_list)>0:
+        if t4<0 and fp.robots[1].is_at_end_point():
+            t4 = t
+            fp.robots[1].load_roll_container(fp.buffer_lanes[(0,1)].pop_roll_container())
+            fp.robots[1].set_path(fp.get_shortest_path(0, 2, buffer_lane1=1, buffer_lane2=3))
+
+        if t4>0 and fp.robots[1].is_at_end_point() and not fp.robots[1].rol is None:
+            fp.buffer_lanes[(2,3)].store_roll_container( fp.robots[1].unload_roll_container())
+            fp.robots[1].set_path(fp.get_shortest_path(2, 3, buffer_lane1=3, parking2=3))
+
+        if t%4==0 and len(rc_list)>0:
             fp.buffer_lanes[(0, 1)].store_roll_container(rc_list.pop())
 
         fp.step()
         fp.draw()
         fp.imshow("Test")
-        cv.waitKey(20)
+        cv.waitKey(40)
 
     cv.waitKey(0)
     cv.destroyAllWindows()
