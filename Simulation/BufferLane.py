@@ -33,7 +33,7 @@ class BufferLane:
         self.w1, self.h1 = round_coords((self.w1, self.h1))
         self.w2, self.h2 = round_coords((self.w2, self.h2))
 
-    def step(self):
+    def time_step(self):
         move = BUFFER_LANE_SPEED * TIME_STEP_S
         if self.lane_up:
             for r, rol in enumerate(self.store):

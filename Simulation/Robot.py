@@ -3,13 +3,13 @@ from FloorPlan import get_orientation, get_distance_city_block, TIME_STEP_S, W_F
                       ROBOT_SPEED, W1_ROBOT, W2_ROBOT, H1_ROBOT, H2_ROBOT
 
 class Robot:
-    def __init__(self, w, h, orientation, color):
+    def __init__(self, w, h, orientation):
 
         self.w   = w
         self.h   = h
         self.o   = orientation
         self.rot = [[1, 0], [0, 1]]
-        self.col = color
+        self.col = (200, 0, 0)
         self.rol = None
 
         self.__update_rotmat()
@@ -26,6 +26,9 @@ class Robot:
             self.rol.o = self.o
 
     def set_path(self, path):
+        if len(path)<=0:
+            print("ERROR: Robot.set_path(). Invalid length")
+            return
         self.path      = path
         self.set_coords(path[0])
 
@@ -34,7 +37,7 @@ class Robot:
         if len(self.path)>1:
             self.o = get_orientation(self.path[0], self.path[1])
 
-    def step(self):
+    def time_step(self):
         self.sample += 1
         if self.segment>=len(self.path)-1:
             return

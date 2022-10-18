@@ -3,10 +3,11 @@ from FloorPlan import W_ROLL_CONTAINER, H_ROLL_CONTAINER, BLACK
 
 
 class RollContainer:
-    def __init__(self, w, h, orientation, color, shift):
+    def __init__(self, w, h, orientation, destination, shift, color):
         self.w     = w
         self.h     = h
         self.o     = orientation
+        self.dest  = destination
         self.col   = color
         self.shift = shift
 

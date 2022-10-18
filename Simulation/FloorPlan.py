@@ -126,18 +126,20 @@ class FloorPlan:
         self.robots = []
         for r in range(n_robots):
             dock = r%N_DOCK
-            park = r//N_DOCK
-            if park>=self.parkings[0].n_parc_spot:
+            spot = self.parkings[dock].get_first_empty_spot(self)
+            if spot is None:
                 break
-            self.robots.append(Robot(*self.get_item_coords(dock=dock, parking=park), 3, (200, 0, 0)))
 
-    def step(self):
+            self.parkings[dock].park(spot)
+            self.robots.append(Robot(spot.w, spot.h, 3))
+
+    def time_step(self):
         for dock in range(N_DOCK):
             for lane in range(N_LANE):
-                self.buffer_lanes[(dock, lane)].step()
+                self.buffer_lanes[(dock, lane)].time_step()
 
         for rob in self.robots:
-            rob.step()
+            rob.time_step()
 
     def draw(self, draw_grid=False, draw_circulation=False):
         self.figure = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)

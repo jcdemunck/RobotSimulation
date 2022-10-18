@@ -4,6 +4,9 @@ import random
 from RollContainer import RollContainer
 from FloorPlan import FloorPlan, TIME_STEP_S, TIME_ROLL_CONTAINER_LOAD
 
+DESTINATIONS = ["Amsterdam","Apeldoorn","Groningen","Assen"]
+col_dict     = {"Amsterdam": (0,255,200), "Apeldoorn": (255,200,0), "Groningen":(100,100,255), "Assen":(100,0,50)}
+
 def main():
     fp = FloorPlan(8)
     fp.header_text = "time="
@@ -11,12 +14,12 @@ def main():
     fp.imshow("Test")
     cv.waitKey(0)
 
+
     rc_list = []
-    for t in range(10):
-        rr = random.randint(0,255)
-        gg = random.randint(0,255)
-        bb = random.randint(0,255)
-        rc_list.append( RollContainer(0., 0., 3, (rr, gg, bb), t))
+    for t in range(20):
+        dest  = DESTINATIONS[random.randint(0, len(DESTINATIONS)-1)]
+        shift = random.randint(1,6)
+        rc_list.append( RollContainer(0., 0., 3, dest, shift, col_dict[dest]))
 
     path1 = fp.get_shortest_path(2, 0, parking1=0, buffer_lane2=1)
     path2 = fp.get_shortest_path(0, 3, buffer_lane1=1, store2=0, row2=5)
@@ -58,7 +61,7 @@ def main():
                 fp.buffer_lanes[(0, 1)].store_roll_container(rc_list.pop())
             t_load -= TIME_ROLL_CONTAINER_LOAD
 
-        fp.step()
+        fp.time_step()
         fp.draw(draw_grid=True)
         fp.imshow("Test")
         cv.waitKey(40)
