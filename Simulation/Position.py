@@ -40,6 +40,8 @@ class Position:
                 return
 
             self.buffer_store     = buffer_store
+            self.row              = row
+            self.col              = col
             self.w, self.h = floor_plan.buffer_stores[(dock, buffer_store)].get_grid_coords(row=row, col=col)
         else:
             print("ERROR: Position.__init__(). Invalid arguments ")

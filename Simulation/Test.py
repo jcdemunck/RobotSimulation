@@ -33,6 +33,31 @@ def main():
     path2 = fp.get_shortest_path(pos2, pos3)
     path3 = fp.get_shortest_path(pos3, pos4)
 
+
+    for t in range(400):
+        sec = int(t*TIME_STEP_S) % 60
+        mi  = int(t*TIME_STEP_S) // 60
+        fp.header_text = f"time={mi:2d}:{sec:02d}"
+        if t==10:
+            fp.start_unloading_truck(0, rc_list)
+            for r in range(4):
+                fp.robots[r].wait_goto_load_store_park(fp, r*1., pos2, pos3, pos4)
+
+        fp.time_step()
+        fp.draw(draw_grid=True)
+        fp.imshow("Test")
+        cv.waitKey(40)
+
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+
+
+
+    return
+
+
+
+
     t2 = -1
     t3 = -1
     t4 = -1

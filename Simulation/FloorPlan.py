@@ -61,17 +61,19 @@ H2_ROBOT = 0.4
 
 TIME_STEP_S       =  0.3
 ROBOT_SPEED       =  1.0  # (1.2) m/s
-ROBOT_LOAD_TIME   = 10. # [s]
-ROBOT_UNLOAD_TIME = 10. # [s]
+ROBOT_LOAD_TIME   = 5. # [s]
+ROBOT_UNLOAD_TIME = 5. # [s]
 BUFFER_LANE_SPEED =  0.3
 
 
 DESTINATIONS            = ["Amsterdam","Apeldoorn","Groningen","Assen"]
 destination_color_dict  = {"Amsterdam": (0,255,200), "Apeldoorn": (255,200,0), "Groningen":(100,100,255), "Assen":(100,0,50)}
 
-
+_CO_SCALE = 1000.
+def round_coord(co):
+    return int(_CO_SCALE*co+0.5)/_CO_SCALE
 def round_coords(co):
-    return int(1000*co[0]+0.5)/1000., int(1000*co[1]+0.5)/1000.
+    return int(_CO_SCALE*co[0]+0.5)/_CO_SCALE, int(_CO_SCALE*co[1]+0.5)/_CO_SCALE
 
 def get_distance(p1, p2):
     return np.sqrt( (p1[0]-p2[0])*(p1[0]-p2[0]) + (p1[1]-p2[1])*(p1[1]-p2[1]) )

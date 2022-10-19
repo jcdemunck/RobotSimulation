@@ -96,16 +96,16 @@ class Robot:
         else: # pickup or store roll container
             store = self.task_list[0]
             if self.rol is None:
-                self.rol = store.pickup_roll_container()
+                self.load_roll_container(store.pickup_roll_container())
             else:
-                store.store_roll_container(self.rol)
+                store.store_roll_container(self.unload_roll_container())
 
             self.task_list.pop(0)
             if len(self.task_list)>=0 and type(self.task_list[0])==list:
                 self.init_path(self.task_list[0])
 
     def is_at_end_point(self):
-        return self.segment==len(self.path)### or len(self.path)==1
+        return self.segment==len(self.path)
 
     def get_time_to_pos(self, floor_plan, pos):
         coords1  = (self.w, self.h)
@@ -114,7 +114,7 @@ class Robot:
 
         return get_path_len(path)/ROBOT_SPEED
 
-    def goto_load_store_park(self, floor_plan, pos_load, pos_unload, pos_park):
+    def wait_goto_load_store_park(self, floor_plan, wait, pos_load, pos_unload, pos_park):
         if not self.rol is None:
             print("ERROR: RollContainer.goto_load_store_park(). roll container already loaded")
             return
@@ -124,10 +124,11 @@ class Robot:
         coords_unload = pos_unload.get_coords()
         coords_park   = pos_park.get_coords()
 
-        self.task_list = [floor_plan.grid_graph.get_shortest_path(coords_self, coords_load, get_distance_city_block),
-                          pos_load.get_store_object(), ROBOT_LOAD_TIME,
+        self.task_list = [wait,
+                          floor_plan.grid_graph.get_shortest_path(coords_self, coords_load, get_distance_city_block),
+                          pos_load.get_store_object(floor_plan), ROBOT_LOAD_TIME,
                           floor_plan.grid_graph.get_shortest_path(coords_load, coords_unload, get_distance_city_block),
-                          pos_unload.get_store_object(), ROBOT_UNLOAD_TIME,
+                          pos_unload.get_store_object(floor_plan), ROBOT_UNLOAD_TIME,
                           floor_plan.grid_graph.get_shortest_path(coords_unload, coords_park, get_distance_city_block)]
 
     def __update_rotmat(self):

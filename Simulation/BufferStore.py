@@ -1,12 +1,14 @@
 import cv2 as cv
-from FloorPlan import round_coords, \
+from FloorPlan import round_coord, round_coords, \
                       N_DOCK, W_DOCK, H_LANE, H_FLOOR, H_FRONT, H_LEFT, W_UP, W_DOWN, H_MANEUVER,\
                       N_BUFFER_STORE, W_BUFFER_STORE,  H_BUFFER_STORE, N_COMP_X, N_COMP_Y, W_COMPARTMENT, H_COMPARTMENT, \
                       BLACK
 
 class BufferStoreRow:
-    def __init__(self):
-        self.store = []
+    def __init__(self, w_dict, h):
+        self.store  = []
+        self.w_dict = w_dict
+        self.h      = h
 
     def get_n_stored(self):
         return len(self.store)
@@ -14,6 +16,13 @@ class BufferStoreRow:
     def store_roll_container(self, rol):
         if len(self.store)>=N_COMP_X:
             return
+
+        # update roll container coordinates
+        col   = self.get_n_stored()
+        rol.w = self.w_dict[col]
+        rol.h = self.h
+        rol.o = 2
+
         self.store.append(rol)
 
     def pickup_roll_container(self):
@@ -59,15 +68,13 @@ class BufferStore:
         self.w1_ext, self.h1_ext = round_coords((self.w1_ext, self.h1_ext))
         self.w2_ext, self.h2_ext = round_coords((self.w2_ext, self.h2_ext))
 
-        self.store = [BufferStoreRow() for row in range(N_COMP_Y)]
+        self.w_dict = dict([(col, round_coord(self.w1 + (col+0.5)*W_COMPARTMENT)) for col in range(N_COMP_X)])
+        self.h_dict = dict([(row, round_coord(self.h1 + (row+0.5)*H_COMPARTMENT)) for row in range(N_COMP_Y)])
+        self.store  = [BufferStoreRow(self.w_dict, self.h_dict[row]) for row in range(N_COMP_Y)]
 
     def store_roll_container(self, row, rol):
         if row>=N_COMP_Y: return
         if self.store[row].get_n_stored()>=N_COMP_X: return
-
-        col          = self.store[row].get_n_stored()
-        rol.w, rol.h = self.get_grid_coords(row=row, col=col)
-        rol.o        = 2
 
         self.store[row].store_roll_container(rol)
 
@@ -83,9 +90,7 @@ class BufferStore:
             if corner==3: return self.w1_ext, self.h2_ext  # upper left
 
         else:
-            w = self.w1 + (col + 0.5) * W_COMPARTMENT
-            h = self.h1 + (row + 0.5) * H_COMPARTMENT
-            return round_coords((w, h))
+            return self.w_dict[col], self.h_dict[row]
 
     def get_lowest_row_coords(self, left=True):
         if left: return round_coords((self.w1_ext, self.h1 + 0.5 * H_COMPARTMENT))
