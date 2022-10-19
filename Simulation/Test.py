@@ -2,44 +2,56 @@ import cv2 as cv
 import random
 
 from RollContainer import RollContainer
-from FloorPlan import FloorPlan, TIME_STEP_S, TIME_ROLL_CONTAINER_LOAD
+from Position import Position
+from FloorPlan import FloorPlan, TIME_STEP_S, N_DOCK, \
+                      DESTINATIONS, destination_color_dict
 
-DESTINATIONS = ["Amsterdam","Apeldoorn","Groningen","Assen"]
-col_dict     = {"Amsterdam": (0,255,200), "Apeldoorn": (255,200,0), "Groningen":(100,100,255), "Assen":(100,0,50)}
 
 def main():
     fp = FloorPlan(8)
+    for dock in range(N_DOCK):
+        fp.docks[dock].set_color(destination_color_dict[DESTINATIONS[dock]])
+
     fp.header_text = "time="
     fp.draw(draw_circulation=False, draw_grid=True)
     fp.imshow("Test")
     cv.waitKey(0)
 
-
+    random.seed(13)
     rc_list = []
     for t in range(20):
         dest  = DESTINATIONS[random.randint(0, len(DESTINATIONS)-1)]
         shift = random.randint(1,6)
-        rc_list.append( RollContainer(0., 0., 3, dest, shift, col_dict[dest]))
+        rc_list.append( RollContainer(0., 0., 3, dest, shift, destination_color_dict[dest]))
 
-    path1 = fp.get_shortest_path(2, 0, parking1=0, buffer_lane2=1)
-    path2 = fp.get_shortest_path(0, 3, buffer_lane1=1, store2=0, row2=5)
-    path3 = fp.get_shortest_path(3, 1, store1=0, row1=5, parking2=2)
+    pos1 = Position(fp, dock=2, parking=0)
+    pos2 = Position(fp, dock=0, buffer_lane=1)
+    pos3 = Position(fp, dock=3, buffer_store=0, row=5, col=0)
+    pos4 = Position(fp, dock=1, parking=2)
+
+    path1 = fp.get_shortest_path(pos1, pos2)
+    path2 = fp.get_shortest_path(pos2, pos3)
+    path3 = fp.get_shortest_path(pos3, pos4)
 
     t2 = -1
     t3 = -1
     t4 = -1
-    t_load = 0.
-    for t in range(600):
+    for t in range(400):
         sec = int(t*TIME_STEP_S) % 60
         mi  = int(t*TIME_STEP_S) // 60
-        fp.header_text = f"time={mi:2d}:{sec:2d}"
+        fp.header_text = f"time={mi:2d}:{sec:02d}"
+        if t==1:
+            fp.start_unloading_truck(0, rc_list)
+
         if t==50:   fp.robots[2].set_path(path1)
         if t>50 and t2<0 and fp.robots[2].is_at_end_point():
             t2 = t
-            fp.robots[2].load_roll_container(fp.buffer_lanes[(0,1)].pop_roll_container())
+            fp.robots[2].load_roll_container(fp.buffer_lanes[(0,1)].pickup_roll_container())
             fp.robots[2].set_path(path2)
 
-            fp.robots[1].set_path(fp.get_shortest_path(0, 0, parking1=0, buffer_lane2=1))
+            pos1 = Position(fp, dock=0, parking=0)
+            pos2 = Position(fp, dock=0, buffer_lane=1)
+            fp.robots[1].set_path(fp.get_shortest_path(pos1, pos2))
 
         if t3<0 and fp.robots[2].is_at_end_point():
             t3 = t
@@ -48,18 +60,20 @@ def main():
 
         if t4<0 and fp.robots[1].is_at_end_point():
             t4 = t
-            fp.robots[1].load_roll_container(fp.buffer_lanes[(0,1)].pop_roll_container())
-            fp.robots[1].set_path(fp.get_shortest_path(0, 2, buffer_lane1=1, buffer_lane2=3))
+            fp.robots[1].load_roll_container(fp.buffer_lanes[(0,1)].pickup_roll_container())
+
+            pos1 = Position(fp, dock=0, buffer_lane=1)
+            pos2 = Position(fp, dock=2, buffer_lane=3)
+            fp.robots[1].set_path(fp.get_shortest_path(pos1, pos2))
 
         if t4>0 and fp.robots[1].is_at_end_point() and not fp.robots[1].rol is None:
             fp.buffer_lanes[(2,3)].store_roll_container( fp.robots[1].unload_roll_container())
-            fp.robots[1].set_path(fp.get_shortest_path(2, 3, buffer_lane1=3, parking2=2))
 
-        t_load += TIME_STEP_S
-        if t_load>0.:
-            if len(rc_list)>0:
-                fp.buffer_lanes[(0, 1)].store_roll_container(rc_list.pop())
-            t_load -= TIME_ROLL_CONTAINER_LOAD
+            pos1 = Position(fp, dock=2, buffer_lane=3)
+            pos2 = Position(fp, dock=3, parking=2)
+
+            fp.robots[1].set_path(fp.get_shortest_path(pos1, pos2))
+
 
         fp.time_step()
         fp.draw(draw_grid=True)

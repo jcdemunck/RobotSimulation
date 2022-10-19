@@ -44,7 +44,7 @@ H_LANE         = 18.
 MAX_LANE_STORE = 24
 H_LANE_STORE   = 0.9
 
-N_DOCK     =  6
+N_DOCK     =  4
 
 W_FLOOR    = N_DOCK * W_DOCK
 H_FLOOR    = H_FRONT + H_LANE + H_MANEUVER + N_COMP_Y * H_COMPARTMENT + H_REAR
@@ -60,8 +60,15 @@ H1_ROBOT = 0.7
 H2_ROBOT = 0.4
 
 TIME_STEP_S       =  0.3
-ROBOT_SPEED       =  1.2 # m/s
+ROBOT_SPEED       =  1.0  # (1.2) m/s
+ROBOT_LOAD_TIME   = 10. # [s]
+ROBOT_UNLOAD_TIME = 10. # [s]
 BUFFER_LANE_SPEED =  0.3
+
+
+DESTINATIONS            = ["Amsterdam","Apeldoorn","Groningen","Assen"]
+destination_color_dict  = {"Amsterdam": (0,255,200), "Apeldoorn": (255,200,0), "Groningen":(100,100,255), "Assen":(100,0,50)}
+
 
 def round_coords(co):
     return int(1000*co[0]+0.5)/1000., int(1000*co[1]+0.5)/1000.
@@ -135,11 +142,24 @@ class FloorPlan:
 
     def time_step(self):
         for dock in range(N_DOCK):
+            self.docks[dock].time_step()
+
             for lane in range(N_LANE):
                 self.buffer_lanes[(dock, lane)].time_step()
 
+            # Move trolleys from (unloading) truck to input buffer lane(s)
+            if len(self.docks[dock].rc_unloading)>0 and self.docks[dock].sample>self.docks[dock].sample_unload:
+                for lane in range(N_LANE):
+                    buffer_lane = self.buffer_lanes[(dock, lane)]
+                    if buffer_lane.lane_up and buffer_lane.can_be_loaded():
+                        buffer_lane.store_roll_container(self.docks[dock].rc_unloading.pop())
+                        break
+
         for rob in self.robots:
             rob.time_step()
+
+    def start_unloading_truck(self, dock, roll_containers):
+        self.docks[dock].start_unloading(roll_containers)
 
     def draw(self, draw_grid=False, draw_circulation=False):
         self.figure = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)
@@ -149,6 +169,9 @@ class FloorPlan:
             self.draw_grid()
         self.__draw_legends()
         for dock in range(N_DOCK):
+            if dock>0:
+                self.figure = cv.line(self.figure, self.pnt_from_coords(dock * W_DOCK, 0.),
+                                                   self.pnt_from_coords(dock * W_DOCK, H_FLOOR), BLACK, 1)
             if draw_circulation:
                 self.__draw_circulation(dock)
             for store in range(N_BUFFER_STORE):
@@ -287,16 +310,10 @@ class FloorPlan:
             if store>=N_BUFFER_STORE: return
             return self.buffer_stores[(dock, store)].get_grid_coords(row=row, col=col)
 
-    def get_shortest_path(self, dock1, dock2, buffer_lane1=-1, parking1=-1, store1=-1, row1=-1, buffer_lane2=-1, parking2=-1, store2=-1, row2=-1):
-        if dock1<0 or N_DOCK<=dock1 or dock2<0 or N_DOCK<=dock2:
-            print("ERROR: get_shortest_path(). Dock out of range. ", dock1, dock2)
-            return
-
-        coords1 = self.get_item_coords(dock1, buffer_lane1, parking1, store1, row1, 0)
-        coords2 = self.get_item_coords(dock2, buffer_lane2, parking2, store2, row2, 0)
-
-        if not coords1 is None and not coords2 is None: return self.grid_graph.get_shortest_path(coords1, coords2, get_distance)
-        print("ERROR: get_shortest_path(). Getting coords. ", buffer_lane1, parking1, store1, row1, buffer_lane2, parking2, store2, row2)
+    def get_shortest_path(self, pos1, pos2):
+        coords1 = pos1.get_coords()
+        coords2 = pos2.get_coords()
+        return self.grid_graph.get_shortest_path(coords1, coords2, get_distance_city_block)
 
     def draw_path(self, path, color=(255,0,0)):
         p1 = path[0]

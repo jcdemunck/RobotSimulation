@@ -4,6 +4,24 @@ from FloorPlan import round_coords, \
                       N_BUFFER_STORE, W_BUFFER_STORE,  H_BUFFER_STORE, N_COMP_X, N_COMP_Y, W_COMPARTMENT, H_COMPARTMENT, \
                       BLACK
 
+class BufferStoreRow:
+    def __init__(self):
+        self.store = []
+
+    def get_n_stored(self):
+        return len(self.store)
+
+    def store_roll_container(self, rol):
+        if len(self.store)>=N_COMP_X:
+            return
+        self.store.append(rol)
+
+    def pickup_roll_container(self):
+        if len(self.store)<=0:
+            return
+
+        return  self.store.pop(-1)
+
 class BufferStore:
     def __init__(self, dock, buffer):
         if dock<0   or N_DOCK<=dock: return
@@ -41,17 +59,21 @@ class BufferStore:
         self.w1_ext, self.h1_ext = round_coords((self.w1_ext, self.h1_ext))
         self.w2_ext, self.h2_ext = round_coords((self.w2_ext, self.h2_ext))
 
-        self.store = [[] for row in range(N_COMP_Y)]
+        self.store = [BufferStoreRow() for row in range(N_COMP_Y)]
 
     def store_roll_container(self, row, rol):
         if row>=N_COMP_Y: return
-        if len(self.store[row])>=N_COMP_X: return
+        if self.store[row].get_n_stored()>=N_COMP_X: return
 
-        col  = len(self.store[row])
+        col          = self.store[row].get_n_stored()
         rol.w, rol.h = self.get_grid_coords(row=row, col=col)
         rol.o        = 2
 
-        self.store[row].append(rol)
+        self.store[row].store_roll_container(rol)
+
+    def pickup_roll_container(self, row):
+        if row>=N_COMP_Y: return
+        return self.store[row].pickup_roll_container()
 
     def get_grid_coords(self, row=-1, col=-1, corner=-1):
         if row<0 or col<0:
@@ -83,7 +105,7 @@ class BufferStore:
                 floor_plan.figure = cv.rectangle(floor_plan.figure, pt1, pt2, BLACK, 1)
 
         for row in range(N_COMP_Y):
-            for rol in self.store[row]:
+            for rol in self.store[row].store:
                 rol.draw(floor_plan)
 
     def draw_circulation(self, floor_plan):
