@@ -65,10 +65,6 @@ ROBOT_LOAD_TIME   = 5. # [s]
 ROBOT_UNLOAD_TIME = 5. # [s]
 BUFFER_LANE_SPEED =  0.3
 
-
-DESTINATIONS            = ["Amsterdam","Apeldoorn","Groningen","Assen"]
-destination_color_dict  = {"Amsterdam": (0,255,200), "Apeldoorn": (255,200,0), "Groningen":(100,100,255), "Assen":(100,0,50)}
-
 _CO_SCALE = 1000.
 def round_coord(co):
     return int(_CO_SCALE*co+0.5)/_CO_SCALE
@@ -144,21 +140,27 @@ class FloorPlan:
 
     def time_step(self):
         for dock in range(N_DOCK):
-            self.docks[dock].time_step()
-
             for lane in range(N_LANE):
                 self.buffer_lanes[(dock, lane)].time_step()
 
             # Move trolleys from (unloading) truck to input buffer lane(s)
-            if len(self.docks[dock].rc_unloading)>0 and self.docks[dock].sample>self.docks[dock].sample_unload:
+            if self.docks[dock].get_nrc_input()>0:
                 for lane in range(N_LANE):
                     buffer_lane = self.buffer_lanes[(dock, lane)]
                     if buffer_lane.lane_up and buffer_lane.can_be_loaded():
                         buffer_lane.store_roll_container(self.docks[dock].rc_unloading.pop())
-                        break
 
         for rob in self.robots:
             rob.time_step()
+
+    def get_incoming_roll_containers(self, dock):
+        roll_containers = []
+        for lane in range(N_LANE):
+            buffer_lane = self.buffer_lanes[(dock, lane)]
+            if not buffer_lane.lane_up: continue
+            roll_containers += buffer_lane.get_expected_roll_containers()
+
+        return sorted(roll_containers, key=lambda x: x[0])
 
     def start_unloading_truck(self, dock, roll_containers):
         self.docks[dock].start_unloading(roll_containers)

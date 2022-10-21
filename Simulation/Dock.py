@@ -23,9 +23,7 @@ class Dock:
 
         self.rc_loading    = []
         self.rc_unloading  = []
-        self.sample        = 0
-        self.sample_load   = 0
-        self.sample_unload = 0
+        self.occupied      = False
 
         self.color         = (200,0,0)
 
@@ -34,13 +32,14 @@ class Dock:
 
     def start_unloading(self, roll_containers):
         self.rc_unloading  += roll_containers
-        self.sample_unload  = self.sample
+        self.occupied       = True
 
-    def time_step(self):
-        self.sample +=1
+    def get_nrc_input(self):
+        return len(self.rc_unloading)
+
 
     def draw(self, floor_plan):
-        if self.sample_load==self.sample_unload:
+        if not self.occupied:
             pt1 = floor_plan.pnt_from_coords(self.w1, self.h1-0.15)
             pt2 = floor_plan.pnt_from_coords(self.w2, self.h2)
 

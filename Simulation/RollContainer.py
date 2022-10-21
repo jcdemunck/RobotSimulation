@@ -2,6 +2,7 @@ import cv2 as cv
 from FloorPlan import W_ROLL_CONTAINER, H_ROLL_CONTAINER, BLACK
 
 
+
 class RollContainer:
     def __init__(self, w, h, orientation, destination, shift, color):
         self.w     = w

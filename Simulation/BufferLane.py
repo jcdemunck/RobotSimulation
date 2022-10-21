@@ -1,9 +1,14 @@
 import cv2 as cv
+from collections import namedtuple
+
 from FloorPlan import round_coords, \
                       N_DOCK, W_DOCK, H_FRONT, \
                       W_LANE, H_LANE, N_LANE, H_LANE_STORE, MAX_LANE_STORE, BUFFER_LANE_SPEED, TIME_ROLL_CONTAINER_LOAD, \
                       TIME_STEP_S, \
                       BLACK, WHITE
+
+RollContainerIO = namedtuple("rc_in_out", "eta lane destination shift")
+
 class BufferLane:
     def __init__(self, dock, lane):
         if dock<0 or N_DOCK<=dock: return
@@ -30,8 +35,12 @@ class BufferLane:
         self.w1, self.h1 = round_coords((self.w1, self.h1))
         self.w2, self.h2 = round_coords((self.w2, self.h2))
 
-    def get_expected_times(self):
-        return [(self.store_coord_dict[MAX_LANE_STORE-1][1]-rol.h)/BUFFER_LANE_SPEED for rol in self.store]
+    def get_expected_roll_containers(self):
+        """
+            return list of expected roll containers as tuples:
+            (expected time of availability, lane, destination, shift)
+        """
+        return [RollContainerIO((self.store_coord_dict[MAX_LANE_STORE-1][1]-rol.h)/BUFFER_LANE_SPEED, self.lane, rol.dest, rol.shift) for rol in self.store]
 
     def time_step(self):
         move = BUFFER_LANE_SPEED * TIME_STEP_S
