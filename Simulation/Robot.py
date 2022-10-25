@@ -84,7 +84,7 @@ class RobotTask:
             if self.wait<=0.:
                 self.finished = True
 
-    def time_to_finish(self):
+    def get_time_to_finish(self):
         if self.finished:
             return 0.
 
@@ -143,6 +143,20 @@ class Robot:
         path     = floor_plan.grid_graph.get_shortest_path(coords1, coords2, get_distance_city_block)
 
         return get_path_len(path)/ROBOT_SPEED
+
+    def get_time_to_finish(self):
+        time_to_finish = 0.
+        for task in self.task_list:
+            time_to_finish += task.get_time_to_finish()
+        return time_to_finish
+
+    def get_time_to_start_parking(self):
+        time_to_finish = 0.
+        for task in self.task_list:
+            if task.task_type=="goto_parking":
+                break
+            time_to_finish += task.get_time_to_finish()
+        return time_to_finish
 
     def wait_goto_load_store_park(self, floor_plan, wait, pos_load, pos_unload, pos_park):
         if not self.rol is None:

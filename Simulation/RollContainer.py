@@ -5,12 +5,13 @@ from FloorPlan import W_ROLL_CONTAINER, H_ROLL_CONTAINER, BLACK
 
 class RollContainer:
     def __init__(self, w, h, orientation, destination, shift, color):
-        self.w     = w
-        self.h     = h
-        self.o     = orientation
-        self.dest  = destination
-        self.col   = color
-        self.shift = shift
+        self.w         = w
+        self.h         = h
+        self.o         = orientation
+        self.dest      = destination
+        self.col       = color
+        self.shift     = shift
+        self.scheduled = False
 
     def draw(self, floor_plan):
         w1 = self.w - 0.5*W_ROLL_CONTAINER
@@ -40,7 +41,6 @@ class RollContainer:
         font = cv.FONT_HERSHEY_SIMPLEX
         floor_plan.figure = cv.putText(floor_plan.figure, text, pt1, font, 0.7, BLACK)
 
-
     def rotate(self, left):
-        step   = 1 if left else -1
+        step   = 1 if left else 3
         self.o = (self.o + step)%4

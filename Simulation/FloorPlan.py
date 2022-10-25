@@ -138,6 +138,9 @@ class FloorPlan:
             self.parkings[dock].park(spot)
             self.robots.append(Robot(spot.w, spot.h, 3))
 
+    def get_robots_idle(self):
+        return [rob for rob in self.robots if len(rob.task_list)==0]
+
     def time_step(self):
         for dock in range(N_DOCK):
             for lane in range(N_LANE):

@@ -7,7 +7,7 @@ from FloorPlan import round_coords, \
                       TIME_STEP_S, \
                       BLACK, WHITE
 
-RollContainerIO = namedtuple("rc_in_out", "eta lane destination shift")
+RollContainerIO = namedtuple("rc_in_out", "eta lane roll_container")
 
 class BufferLane:
     def __init__(self, dock, lane):
@@ -40,7 +40,7 @@ class BufferLane:
             return list of expected roll containers as tuples:
             (expected time of availability, lane, destination, shift)
         """
-        return [RollContainerIO((self.store_coord_dict[MAX_LANE_STORE-1][1]-rol.h)/BUFFER_LANE_SPEED, self.lane, rol.dest, rol.shift) for rol in self.store]
+        return [RollContainerIO((self.store_coord_dict[MAX_LANE_STORE-1][1]-rol.h)/BUFFER_LANE_SPEED, self.lane, rol) for rol in self.store]
 
     def time_step(self):
         move = BUFFER_LANE_SPEED * TIME_STEP_S
@@ -54,7 +54,7 @@ class BufferLane:
         self.dead_time += TIME_STEP_S
 
     def can_be_loaded(self):
-        return len(self.store)<MAX_LANE_STORE and self.dead_time>0.
+        return len(self.store)<MAX_LANE_STORE and self.dead_time>=0.
 
     def get_grid_coords(self):
         # return top store
@@ -84,9 +84,9 @@ class BufferLane:
         if len(self.store)>=MAX_LANE_STORE: return
 
         rol.w, rol.h = self.store_coord_dict[0]
-        rol.o = 1 if self.lane_up else 3
+        rol.o = 3 if self.lane_up else 1
         self.store.append(rol)
-        self.dead_time -= TIME_ROLL_CONTAINER_LOAD
+        self.dead_time =-TIME_ROLL_CONTAINER_LOAD
 
     def pickup_roll_container(self):
         if len(self.store)>0:

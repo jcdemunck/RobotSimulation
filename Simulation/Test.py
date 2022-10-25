@@ -28,30 +28,35 @@ def main():
         shift = random.randint(1,6)
         rc_list.append( RollContainer(0., 0., 3, dest, shift, destination_color_dict[dest]))
 
-    n_robots_active = 8
-    robots_planned  = False
-    for t in range(600):
+    wait_time = 0
+    for t in range(1000):
         sec = int(t*TIME_STEP_S) % 60
         mi  = int(t*TIME_STEP_S) // 60
         fp.header_text = f"time={mi:2d}:{sec:02d}"
         if t==10:
             fp.start_unloading_truck(0, rc_list)
+            wait_time = 0.
 
-        if t>10 and not robots_planned:
-            # Make plan to process (first n_robots_active)
+        if t>10 and t%10==0:
+            # Make plan to process
             rc_incoming = fp.get_incoming_roll_containers(0)
-            if len(rc_incoming)>=n_robots_active:
-                robots_planned = True
-                for r in range(n_robots_active):
-                    pos_park   = Position(fp, r%N_DOCK, parking=r//N_DOCK)
-                    roll_io    = rc_incoming[r]
-                    pos_pickup = Position(fp, 0, buffer_lane=roll_io.lane)
-                    wait       = max(0., roll_io.eta-fp.robots[r].get_time_to_pos(fp, pos_pickup) + r*TIME_LOAD_TOTAL)
-                    if roll_io.shift>5:
-                        pos_store = Position(fp, DESTINATIONS.index(roll_io.destination), buffer_store=0, row=roll_io.shift-5, col=0)
-                    else:
-                        pos_store = Position(fp, DESTINATIONS.index(roll_io.destination), buffer_lane=3)
-                    fp.robots[r].wait_goto_load_store_park(fp, wait, pos_pickup, pos_store, pos_park)
+            rc_incoming = [rio for rio in rc_incoming if not rio.roll_container.scheduled]
+            robots      = fp.get_robots_idle()
+
+            for r, (rob, roll_io) in enumerate(zip(robots, rc_incoming)):
+                pos_park   = Position(fp, r%N_DOCK, parking=r//N_DOCK)
+                pos_pickup = Position(fp, 0, buffer_lane=roll_io.lane)
+                wait  = max(0., roll_io.eta-rob.get_time_to_pos(fp, pos_pickup) + wait_time)
+                shift = roll_io.roll_container.shift
+                dest  = roll_io.roll_container.dest
+                if shift>5:
+                    pos_store = Position(fp, DESTINATIONS.index(dest), buffer_store=0, row=shift-5, col=0)
+                else:
+                    pos_store = Position(fp, DESTINATIONS.index(dest), buffer_lane=3)
+                rob.wait_goto_load_store_park(fp, wait, pos_pickup, pos_store, pos_park)
+
+                roll_io.roll_container.scheduled = True
+                wait_time += TIME_LOAD_TOTAL
 
         fp.time_step()
         fp.draw(draw_grid=True)
