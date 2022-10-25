@@ -5,6 +5,102 @@ from FloorPlan import get_orientation, get_distance_city_block, get_path_len, \
 
 
 
+class RobotTask:
+    def __init__(self, wait=0., floor_plan=None, coords_from=None, goto_pos=None, load_store=None, unload_store=None):
+        self.task_type = "no_task"
+        self.finished  = False
+
+        if not floor_plan is None:
+            if not coords_from is None and not goto_pos is None:
+                self.path    = floor_plan.grid_graph.get_shortest_path(coords_from, goto_pos.get_coords())
+                self.segment = 0
+                self.offset  = 0.
+                if goto_pos.pos_type=="buffer_lane":
+                    self.task_type = "goto_buffer_lane"
+                elif goto_pos.pos_type=="buffer_store":
+                    self.task_type = "goto_buffer_store"
+                elif goto_pos.pos_type=="parking":
+                    self.task_type = "goto_parking"
+                else:
+                    self.task_type = "goto"
+
+                if(len(self.path))<=1:
+                    self.finished = True
+
+        elif not load_store is None:
+            self.store     = load_store
+            self.task_type = "pickup"
+
+        elif not unload_store is None:
+            self.store     = unload_store
+            self.task_type = "unload"
+
+        else:
+            self.wait      = wait
+            self.task_type = "wait"
+            if self.wait<0:
+                self.finished = True
+
+    def time_step(self, robot):
+        if self.task_type[0:4]=="goto":
+            if self.segment>=len(self.path)-1:
+                self.finished = True
+                return
+
+            step_todo = TIME_STEP_S * ROBOT_SPEED
+            p_begin   = robot.get_coords_offset(self.path[self.segment], self.offset)
+            for p_end in self.path[self.segment + 1:]:
+                d = get_distance_city_block(p_begin, p_end)
+                if d>0.:
+                    robot.o = get_orientation(p_begin, p_end)
+                    robot._update_rot_mat()
+
+                if step_todo<d:  # step before segment end point
+                    self.offset += step_todo
+                    robot.set_coords(robot.get_coords_offset(self.path[self.segment], self.offset))
+                    return
+
+                else:  # step beyond segment end point
+                    self.offset = 0.
+                    step_todo -= d
+                    p_begin = p_end
+                    self.segment += 1
+
+            self.segment = len(self.path)  # use this to test whether robot is at end of path
+            self.offset  = 0.
+            robot.set_coords(self.path[-1])
+            self.finished = True
+
+        elif self.task_type=="pickup":
+            robot.load_roll_container(self.store.pickup_roll_container())
+            self.finished = True
+
+        elif self.task_type=="unload":
+            self.store.store_roll_container(robot.unload_roll_container())
+            self.finished = True
+
+        elif self.task_type=="wait":
+            self.wait -= TIME_STEP_S
+            if self.wait<=0.:
+                self.finished = True
+
+    def time_to_finish(self):
+        if self.finished:
+            return 0.
+
+        if self.task_type[0:4]=="goto":
+            p1 = self.path[self.segment  ]
+            p2 = self.path[self.segment+1]
+            distance_todo = get_distance_city_block(p1, p2) - self.offset
+            if self.segment+2<len(self.path):
+                p_old = p2
+                for p in self.path[self.segment+2:-1]:
+                    distance_todo += get_distance_city_block(p_old, p)
+                    p_old = p
+            return distance_todo/ROBOT_SPEED
+
+        return TIME_STEP_S
+
 class Robot:
     def __init__(self, w, h, orientation):
         self.w   = w
@@ -14,12 +110,7 @@ class Robot:
         self.col = (200, 0, 0)
         self.rol = None
 
-        self.__update_rotmat()
-
-        self.sample    = 0
-        self.path      = [(self.w, self.h)]
-        self.offset    = 0.
-        self.segment   = 0
+        self._update_rot_mat()
 
         self.task_list = []
 
@@ -29,83 +120,22 @@ class Robot:
             self.rol.w, self.rol.h = pos
             self.rol.o = self.o
 
-    def set_path(self, path):
-        self.task_list = [path]
-        self.init_path(path)
-
-    def init_path(self, path):
-        if len(path)<=0:
-            print("ERROR: Robot.init_path(). Invalid length")
-            return
-        self.path      = path
-        self.set_coords(path[0])
-
-        self.offset    = 0.
-        self.segment   = 0
-        if len(self.path)>1:
-            self.o = get_orientation(self.path[0], self.path[1])
+    def get_coords_offset(self, coords, s):
+        if self.o==0 or self.o==2:    return coords[0] + (s if self.o==0 else -s), coords[1]
+        if self.o==1 or self.o==3:    return coords[0], coords[1] + (s if self.o==1 else -s)
 
     def time_step(self):
-        def get_p_offset(p, s):
-            if self.o==0 or self.o==2:    return p[0] + (s if self.o==0 else -s), p[1]
-            if self.o==1 or self.o==3:    return p[0], p[1] + (s if self.o==1 else -s)
-
-        self.sample += 1
         if len(self.task_list)<=0: return
 
-        if type(self.task_list[0])==float: # waiting time for (un)loading
-            if self.task_list[0]>=0.:
-                self.task_list[0] -= TIME_STEP_S
-            else:
-                self.task_list.pop(0)
-                if len(self.task_list)>=0 and type(self.task_list[0])==list:
-                    self.init_path(self.task_list[0])
-                return
-
-        elif type(self.task_list[0])==list: # run over path
-            if self.is_at_end_point():
-                self.task_list.pop(0)
-                return
-
-            if self.segment>=len(self.path)-1:
-                return
-
-            step_todo = TIME_STEP_S*ROBOT_SPEED
-            p_begin   = get_p_offset(self.path[self.segment], self.offset)
-            for p_end in self.path[self.segment+1:]:
-                d      = get_distance_city_block(p_begin, p_end)
-                if d>0.:
-                    self.o = get_orientation(p_begin, p_end)
-                    self.__update_rotmat()
-
-                if step_todo<d: # step before segment end point
-                    self.offset    += step_todo
-                    self.set_coords(get_p_offset(self.path[self.segment], self.offset))
-                    return
-
-                else: # step beyond segment end point
-                    self.offset  = 0.
-                    step_todo   -= d
-                    p_begin      = p_end
-                    self.segment+=1
-
-            self.segment = len(self.path)  # use this to test whether robot is at end of path
-            self.offset  = 0.
-            self.set_coords(self.path[-1])
-
-        else: # pickup or store roll container
-            store = self.task_list[0]
-            if self.rol is None:
-                self.load_roll_container(store.pickup_roll_container())
-            else:
-                store.store_roll_container(self.unload_roll_container())
-
+        task = self.task_list[0]
+        if task.finished:
             self.task_list.pop(0)
-            if len(self.task_list)>=0 and type(self.task_list[0])==list:
-                self.init_path(self.task_list[0])
+            if len(self.task_list)<=0: return
+            task = self.task_list[0]
 
-    def is_at_end_point(self):
-        return self.segment==len(self.path)
+        task.time_step(self)
+        if task.finished:
+            self.task_list.pop(0)
 
     def get_time_to_pos(self, floor_plan, pos):
         coords1  = (self.w, self.h)
@@ -119,19 +149,17 @@ class Robot:
             print("ERROR: RollContainer.goto_load_store_park(). roll container already loaded")
             return
 
-        coords_self   = (self.w, self.h)
-        coords_load   = pos_load.get_coords()
-        coords_unload = pos_unload.get_coords()
-        coords_park   = pos_park.get_coords()
+        self.task_list = []
+        self.task_list.append(RobotTask(wait=wait))
+        self.task_list.append(RobotTask(floor_plan=floor_plan, coords_from=(self.w, self.h), goto_pos=pos_load))
+        self.task_list.append(RobotTask(load_store=pos_load.get_store_object(floor_plan)))
+        self.task_list.append(RobotTask(wait=ROBOT_LOAD_TIME))
+        self.task_list.append(RobotTask(floor_plan=floor_plan, coords_from=pos_load.get_coords(), goto_pos=pos_unload))
+        self.task_list.append(RobotTask(unload_store=pos_unload.get_store_object(floor_plan)))
+        self.task_list.append(RobotTask(wait=ROBOT_UNLOAD_TIME))
+        self.task_list.append(RobotTask(floor_plan=floor_plan, coords_from=pos_unload.get_coords(), goto_pos=pos_park))
 
-        self.task_list = [wait,
-                          floor_plan.grid_graph.get_shortest_path(coords_self, coords_load, get_distance_city_block),
-                          pos_load.get_store_object(floor_plan), ROBOT_LOAD_TIME,
-                          floor_plan.grid_graph.get_shortest_path(coords_load, coords_unload, get_distance_city_block),
-                          pos_unload.get_store_object(floor_plan), ROBOT_UNLOAD_TIME,
-                          floor_plan.grid_graph.get_shortest_path(coords_unload, coords_park, get_distance_city_block)]
-
-    def __update_rotmat(self):
+    def _update_rot_mat(self):
         if self.o==0:
             self.rot = [[1, 0], [0, 1]]
         elif self.o==1:
@@ -190,7 +218,7 @@ class Robot:
     def rotate(self, left):
         step = 1 if left else -1
         self.o = (self.o + step) % 4
-        self.__update_rotmat()
+        self._update_rot_mat()
 
         if not self.rol is None:
             self.rol.rotate(left)

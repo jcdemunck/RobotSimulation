@@ -47,7 +47,7 @@ def main():
                     roll_io    = rc_incoming[r]
                     pos_pickup = Position(fp, 0, buffer_lane=roll_io.lane)
                     wait       = max(0., roll_io.eta-fp.robots[r].get_time_to_pos(fp, pos_pickup) + r*TIME_LOAD_TOTAL)
-                    if roll_io[3]>5:
+                    if roll_io.shift>5:
                         pos_store = Position(fp, DESTINATIONS.index(roll_io.destination), buffer_store=0, row=roll_io.shift-5, col=0)
                     else:
                         pos_store = Position(fp, DESTINATIONS.index(roll_io.destination), buffer_lane=3)
@@ -61,71 +61,6 @@ def main():
     cv.waitKey(0)
     cv.destroyAllWindows()
 
-
-
-    return
-    pos1 = Position(fp, dock=2, parking=0)
-    pos2 = Position(fp, dock=0, buffer_lane=1)
-    pos3 = Position(fp, dock=3, buffer_store=0, row=5, col=0)
-    pos4 = Position(fp, dock=1, parking=2)
-
-
-    path1 = fp.get_shortest_path(pos1, pos2)
-    path2 = fp.get_shortest_path(pos2, pos3)
-    path3 = fp.get_shortest_path(pos3, pos4)
-
-
-
-
-    t2 = -1
-    t3 = -1
-    t4 = -1
-    for t in range(400):
-        sec = int(t*TIME_STEP_S) % 60
-        mi  = int(t*TIME_STEP_S) // 60
-        fp.header_text = f"time={mi:2d}:{sec:02d}"
-        if t==1:
-            fp.start_unloading_truck(0, rc_list)
-
-        if t==50:   fp.robots[2].set_path(path1)
-        if t>50 and t2<0 and fp.robots[2].is_at_end_point():
-            t2 = t
-            fp.robots[2].load_roll_container(fp.buffer_lanes[(0,1)].pickup_roll_container())
-            fp.robots[2].set_path(path2)
-
-            pos1 = Position(fp, dock=0, parking=0)
-            pos2 = Position(fp, dock=0, buffer_lane=1)
-            fp.robots[1].set_path(fp.get_shortest_path(pos1, pos2))
-
-        if t3<0 and fp.robots[2].is_at_end_point():
-            t3 = t
-            fp.buffer_stores[(3, 0)].store_roll_container(5, fp.robots[2].unload_roll_container())
-            fp.robots[2].set_path(path3)
-
-        if t4<0 and fp.robots[1].is_at_end_point():
-            t4 = t
-            fp.robots[1].load_roll_container(fp.buffer_lanes[(0,1)].pickup_roll_container())
-
-            pos1 = Position(fp, dock=0, buffer_lane=1)
-            pos2 = Position(fp, dock=2, buffer_lane=3)
-            fp.robots[1].set_path(fp.get_shortest_path(pos1, pos2))
-
-        if t4>0 and fp.robots[1].is_at_end_point() and not fp.robots[1].rol is None:
-            fp.buffer_lanes[(2,3)].store_roll_container( fp.robots[1].unload_roll_container())
-
-            pos1 = Position(fp, dock=2, buffer_lane=3)
-            pos2 = Position(fp, dock=3, parking=2)
-
-            fp.robots[1].set_path(fp.get_shortest_path(pos1, pos2))
-
-
-        fp.time_step()
-        fp.draw(draw_grid=True)
-        fp.imshow("Test")
-        cv.waitKey(40)
-
-    cv.waitKey(0)
-    cv.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
