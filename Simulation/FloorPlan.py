@@ -10,6 +10,8 @@ parentdir = currentdir[0:os.path.dirname(currentdir).rfind("\\")]
 sys.path.insert(0, parentdir+"\\dks-ketenrekenmodel\\src\\krm\\core")
 import GraphTools as GT
 
+DESTINATIONS            = ["Amsterdam","Apeldoorn","Groningen","Assen"]
+destination_color_dict  = {"Amsterdam": (0,255,200), "Apeldoorn": (255,200,0), "Groningen":(100,100,255), "Assen":(100,0,50)}
 
 EPS   = 1.e-6
 WHITE = (255,255,255)
@@ -130,13 +132,13 @@ class FloorPlan:
 
         self.robots = []
         for r in range(n_robots):
-            dock = r%N_DOCK
-            spot = self.parkings[dock].get_first_empty_spot(self)
-            if spot is None:
+            dock        = r%N_DOCK
+            parking_pos = self.parkings[dock].get_first_empty_spot(self)
+            if parking_pos is None:
                 break
 
-            self.parkings[dock].park(spot)
-            self.robots.append(Robot(spot.w, spot.h, 3))
+            self.parkings[dock].park(parking_pos)
+            self.robots.append(Robot(parking_pos.w, parking_pos.h, parking_pos))
 
     def get_robots_idle(self):
         return [rob for rob in self.robots if len(rob.task_list)==0]
@@ -150,11 +152,11 @@ class FloorPlan:
             if self.docks[dock].get_nrc_input()>0:
                 for lane in range(N_LANE):
                     buffer_lane = self.buffer_lanes[(dock, lane)]
-                    if buffer_lane.lane_up and buffer_lane.can_be_loaded():
+                    if buffer_lane.lane_up and buffer_lane.can_be_loaded() and self.docks[dock].get_nrc_input()>0:
                         buffer_lane.store_roll_container(self.docks[dock].rc_unloading.pop())
 
         for rob in self.robots:
-            rob.time_step()
+            rob.time_step(self)
 
     def get_incoming_roll_containers(self, dock):
         roll_containers = []

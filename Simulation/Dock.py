@@ -23,23 +23,23 @@ class Dock:
 
         self.rc_loading    = []
         self.rc_unloading  = []
-        self.occupied      = False
+        self.truck         = None
 
         self.color         = (200,0,0)
 
     def set_color(self, col):
         self.color = col
 
-    def start_unloading(self, roll_containers):
-        self.rc_unloading  += roll_containers
-        self.occupied       = True
+    def start_unloading(self, truck):
+        while len(truck.truck_load):
+            self.rc_unloading.append(truck.truck_load.pop())
+        self.truck          = truck
 
     def get_nrc_input(self):
         return len(self.rc_unloading)
 
-
     def draw(self, floor_plan):
-        if not self.occupied:
+        if self.truck is None:
             pt1 = floor_plan.pnt_from_coords(self.w1, self.h1-0.15)
             pt2 = floor_plan.pnt_from_coords(self.w2, self.h2)
 
@@ -51,25 +51,4 @@ class Dock:
             floor_plan.figure = cv.putText(floor_plan.figure, text, pnt, font, 0.5, WHITE)
 
         else:
-            self.__draw_truck(floor_plan, len(self.rc_loading)>0 or len(self.rc_unloading)>0)
-
-    def __draw_truck(self, floor_plan, full):
-        s = 0.2*(self.w2-self.w1)
-        x = self.w1 + 0.5*(self.w2-self.w1)
-        y = self.h2
-
-        truck = [(-1.5, 0.0), (2.5, 0.0), (2.5, 1.0), (1.5, 1.0), (1.5, 2.0), (-1.5, 2.0)]
-        truck = [(x + qx * s, y + (qy + 0.5) * s) for (qx, qy) in truck]
-        truck = [list(floor_plan.pnt_from_coords(*q)) for q in truck]
-
-        if full:
-            floor_plan.figure = cv2.fillPoly(floor_plan.figure, [np.array(truck)], self.color)
-        else:
-            floor_plan.figure = cv2.polylines(floor_plan.figure, [np.array(truck)], True, self.color, 2)
-
-        wheels = [(-1.0, 0.0), (2.0, 0.0)]
-        wheels = [(x + qx*s, y + (qy + 0.5) * s) for (qx, qy) in wheels]
-        wheels = [floor_plan.pnt_from_coords(*q) for q in wheels]
-        for q in wheels:
-            floor_plan.figure = cv2.circle(floor_plan.figure, q, 5, self.color, -1)
-
+            self.truck.draw(floor_plan, self)
