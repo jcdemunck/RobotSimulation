@@ -35,6 +35,8 @@ class BufferLane:
         self.w1, self.h1 = round_coords((self.w1, self.h1))
         self.w2, self.h2 = round_coords((self.w2, self.h2))
 
+        self.n_store_reserved = 0
+
     def get_expected_roll_containers(self):
         """
             return list of expected roll containers as tuples:
@@ -80,6 +82,9 @@ class BufferLane:
         for rol in self.store:
             rol.draw(floor_plan)
 
+    def reserve_store(self):
+        self.n_store_reserved += 1
+
     def store_roll_container(self, rol):
         if len(self.store)>=MAX_LANE_STORE: return
 
@@ -90,4 +95,5 @@ class BufferLane:
 
     def pickup_roll_container(self):
         if len(self.store)>0:
+            self.n_store_reserved -= 1
             return self.store.pop(0)

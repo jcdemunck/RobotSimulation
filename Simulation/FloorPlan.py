@@ -140,9 +140,6 @@ class FloorPlan:
             self.parkings[dock].park(parking_pos)
             self.robots.append(Robot(parking_pos.w, parking_pos.h, parking_pos))
 
-    def get_robots_idle(self):
-        return [rob for rob in self.robots if len(rob.task_list)==0]
-
     def time_step(self):
         for dock in range(N_DOCK):
             for lane in range(N_LANE):
@@ -153,7 +150,8 @@ class FloorPlan:
                 for lane in range(N_LANE):
                     buffer_lane = self.buffer_lanes[(dock, lane)]
                     if buffer_lane.lane_up and buffer_lane.can_be_loaded() and self.docks[dock].get_nrc_input()>0:
-                        buffer_lane.store_roll_container(self.docks[dock].rc_unloading.pop())
+                        buffer_lane.reserve_store()
+                        buffer_lane.store_roll_container(self.docks[dock].off_load_next_roll_container())
 
         for rob in self.robots:
             rob.time_step(self)
@@ -167,8 +165,20 @@ class FloorPlan:
 
         return sorted(roll_containers, key=lambda x: x[0])
 
-    def start_unloading_truck(self, dock, roll_containers):
-        self.docks[dock].start_unloading(roll_containers)
+    def start_unloading_truck(self, dock, truck):
+        self.docks[dock].start_unloading(truck)
+
+    def get_available_output_lane(self, dock):
+        n_min    =  MAX_LANE_STORE+1
+        lane_min = -1
+        for lane in range(N_LANE):
+            buffer_lane = self.buffer_lanes[(dock, lane)]
+            if buffer_lane.lane_up: continue
+            if buffer_lane.n_store_reserved>=MAX_LANE_STORE: continue
+            if buffer_lane.n_store_reserved<n_min:
+                lane_min = lane
+                n_min    = buffer_lane.n_store_reserved
+        return lane_min
 
     def draw(self, draw_grid=False, draw_circulation=False):
         self.figure = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)

@@ -1,6 +1,4 @@
-import cv2
 import cv2 as cv
-import numpy as np
 
 from FloorPlan import round_coords, \
                       N_DOCK, W_DOCK, H_LANE,  \
@@ -21,22 +19,21 @@ class Dock:
         self.w1, self.h1 = round_coords((self.w1, self.h1))
         self.w2, self.h2 = round_coords((self.w2, self.h2))
 
-        self.rc_loading    = []
-        self.rc_unloading  = []
         self.truck         = None
-
         self.color         = (200,0,0)
 
     def set_color(self, col):
         self.color = col
 
     def start_unloading(self, truck):
-        while len(truck.truck_load):
-            self.rc_unloading.append(truck.truck_load.pop())
-        self.truck          = truck
+        self.truck = truck
 
     def get_nrc_input(self):
-        return len(self.rc_unloading)
+        if self.truck is None: return 0
+        return len(self.truck.truck_load)
+
+    def off_load_next_roll_container(self):
+        return self.truck.truck_load.pop(0)
 
     def draw(self, floor_plan):
         if self.truck is None:

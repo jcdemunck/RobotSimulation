@@ -146,10 +146,13 @@ class Robot:
     def insert_process_pickup(self, floor_plan):
         shift = self.rol.shift
         dest  = self.rol.dest
-        if shift>5:
-            pos_store = Position(floor_plan, DESTINATIONS.index(dest), buffer_store=0, row=shift - 5, col=0)
+        dock  = DESTINATIONS.index(dest)
+        lane  = floor_plan.get_available_output_lane(dock)
+        if shift>5 or lane<0:
+            pos_store = Position(floor_plan, dock, buffer_store=0, row=shift, col=0)
         else:
-            pos_store = Position(floor_plan, DESTINATIONS.index(dest), buffer_lane=3)
+            pos_store = Position(floor_plan, dock, buffer_lane=lane)
+            floor_plan.buffer_lanes[(dock, lane)].reserve_store()
 
         task_list = [RobotTask(floor_plan=floor_plan, goto_pos=pos_store),
                      RobotTask(wait=ROBOT_UNLOAD_TIME, unload_store=pos_store.get_store_object(floor_plan))]
@@ -285,7 +288,7 @@ class Robot:
             self.rol.h = self.h
 
     def rotate(self, left):
-        step = 1 if left else -1
+        step = 1 if left else 3
         self.o = (self.o + step) % 4
         self._update_rot_mat()
 
@@ -293,10 +296,11 @@ class Robot:
             self.rol.rotate(left)
 
     def load_roll_container(self, rol):
-        self.rol   = rol
-        self.rol.w = self.w
-        self.rol.h = self.h
-        self.rol.o = self.o
+        self.rol           = rol
+        self.rol.w         = self.w
+        self.rol.h         = self.h
+        self.rol.o         = self.o
+        self.rol.scheduled = False
 
     def unload_roll_container(self):
         rol        = self.rol
