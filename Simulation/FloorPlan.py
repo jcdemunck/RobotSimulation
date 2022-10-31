@@ -67,6 +67,9 @@ ROBOT_LOAD_TIME   = 5. # [s]
 ROBOT_UNLOAD_TIME = 5. # [s]
 BUFFER_LANE_SPEED =  0.3
 
+MAX_TRUCK_LOAD    = 48
+DOCK_TIME         = 300. # [s]
+
 _CO_SCALE = 1000.
 def round_coord(co):
     return int(_CO_SCALE*co+0.5)/_CO_SCALE
@@ -146,12 +149,15 @@ class FloorPlan:
                 self.buffer_lanes[(dock, lane)].time_step()
 
             # Move trolleys from (unloading) truck to input buffer lane(s)
-            if self.docks[dock].get_nrc_input()>0:
                 for lane in range(N_LANE):
                     buffer_lane = self.buffer_lanes[(dock, lane)]
-                    if buffer_lane.lane_up and buffer_lane.can_be_loaded() and self.docks[dock].get_nrc_input()>0:
-                        buffer_lane.reserve_store()
-                        buffer_lane.store_roll_container(self.docks[dock].off_load_next_roll_container())
+                    if buffer_lane.lane_up:
+                        if buffer_lane.can_be_loaded() and self.docks[dock].get_nrc_input()>0:
+                            buffer_lane.reserve_store()
+                            buffer_lane.store_roll_container(self.docks[dock].unload_next_roll_container())
+                    else:
+                        if buffer_lane.can_be_unloaded() and self.docks[dock].get_nrc_output()>0:
+                            self.docks[dock].load_next_roll_container(buffer_lane.pickup_roll_container())
 
         for rob in self.robots:
             rob.time_step(self)
@@ -168,6 +174,9 @@ class FloorPlan:
     def start_unloading_truck(self, dock, truck):
         self.docks[dock].start_unloading(truck)
 
+    def start_loading_truck(self, dock, truck):
+        self.docks[dock].start_loading(truck)
+
     def get_available_output_lane(self, dock):
         n_min    =  MAX_LANE_STORE+1
         lane_min = -1
@@ -179,6 +188,34 @@ class FloorPlan:
                 lane_min = lane
                 n_min    = buffer_lane.n_store_reserved
         return lane_min
+
+    def assign_docks(self, truck_list):
+        """
+            Preliminary dock assignment.
+        """
+        def find_dock(arrival, departure):
+            for d in range(N_DOCK):
+                times = dock_dict[d]
+                if len(times)==0 or departure<times[0][0] or times[-1][1]<arrival:
+                    return d
+                for bb, ee in zip(times, times[1:]):
+                    if bb[1]<arrival and departure<ee[0]:
+                        return d
+            return -1
+
+        # first plan departing trucks (that need specific dock)
+        dock_dict = dict([(d, []) for d in range(N_DOCK)])
+        for truck in sorted(truck_list, key=lambda t: t.arrival):
+            if truck.destination is None: continue
+
+            truck.dock = DESTINATIONS.index(truck.destination)
+            dock_dict[truck.dock].append((truck.arrival, truck.departure))
+
+        # put incoming trucks in empty holes
+        for truck in truck_list:
+            if truck.destination is None:
+                truck.dock = find_dock(truck.arrival, truck.departure)
+                dock_dict[truck.dock] = sorted(dock_dict[truck.dock] + [(truck.arrival, truck.departure)], key=lambda t: t[0])
 
     def draw(self, draw_grid=False, draw_circulation=False):
         self.figure = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)

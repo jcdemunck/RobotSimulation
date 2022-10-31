@@ -58,6 +58,9 @@ class BufferLane:
     def can_be_loaded(self):
         return len(self.store)<MAX_LANE_STORE and self.dead_time>=0.
 
+    def can_be_unloaded(self):
+        return len(self.store)>0 and self.store[0].h<=self.h1+H_LANE_STORE/2
+
     def get_grid_coords(self):
         # return top store
         if self.lane_up: return self.store_coord_dict[MAX_LANE_STORE-1]
