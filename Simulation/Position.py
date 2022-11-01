@@ -1,4 +1,4 @@
-from FloorPlan import N_DOCK, N_LANE, N_BUFFER_STORE, N_COMP_X, N_COMP_Y
+from XdockParams import N_DOCK, N_LANE, N_BUFFER_STORE, N_COMP_X, N_COMP_Y
 
 
 class Position:

@@ -1,9 +1,8 @@
 import cv2 as cv
-from FloorPlan import round_coords, \
-                      N_DOCK, W_DOCK, H_LANE, W_UP, W_DOWN, H_LEFT, H_RIGHT, H_FRONT, H_PARK, W_PARK_PLACE, \
-                      WHITE
+from XdockParams import N_DOCK, W_DOCK, H_LANE, W_UP, W_DOWN, H_LEFT, H_RIGHT, H_FRONT, H_PARK, W_PARK_PLACE, \
+                        WHITE, \
+                        round_coords
 
-from Position import Position
 
 class Parking:
     def __init__(self, dock):
@@ -30,21 +29,6 @@ class Parking:
         h                  = (self.h2+self.h1)/2
         step               = (self.w2-self.w1-W_PARK_PLACE)/(self.n_parc_spot-1)
         self.coord_dict    = dict([(p, round_coords((self.w1+W_PARK_PLACE/2 + p*step, h))) for p in range(self.n_parc_spot)])
-        self.occupied_dict = dict([(p, False) for p in range(self.n_parc_spot)])
-
-    def get_first_empty_spot(self, floor_plan):
-        for p in range(self.n_parc_spot):
-            if not self.occupied_dict[p]: return Position(floor_plan, dock=self.dock, parking=p)
-
-    def park(self, pos):
-        if self.occupied_dict[pos.parking]: return False
-        self.occupied_dict[pos.parking] = True
-        return True
-
-    def un_park(self, pos):
-        if not self.occupied_dict[pos.parking]: return False
-        self.occupied_dict[pos.parking] = False
-        return True
 
     def get_grid_coords(self, park=-1, corner=-1):
         if park<0:

@@ -1,27 +1,16 @@
 import cv2 as cv
-import random
 
-from RollContainer import RollContainer
+
+from FloorPlan import FloorPlan
 from Position import Position
-from Truck import Truck
-from FloorPlan import FloorPlan, TIME_STEP_S, N_DOCK, TIME_ROLL_CONTAINER_LOAD, DOCK_TIME,\
-                      DESTINATIONS, destination_color_dict
+
+from XdockParams import TIME_STEP_S, N_DOCK, TIME_ROLL_CONTAINER_LOAD
+from SimulationConfig import DESTINATIONS, destination_color_dict, \
+                             assign_docks, get_truck_list, trucks_from_file
 
 
 TIME_LOAD_TOTAL = 1.5*TIME_ROLL_CONTAINER_LOAD
 
-def create_truck(nrc, destination, t_arrive):
-    if destination is None: # unloading truck
-        rc_list = []
-        for t in range(nrc):
-            dest  = DESTINATIONS[random.randint(0, len(DESTINATIONS)-1)]
-            shift = random.randint(0,9)
-            rc_list.append( RollContainer(0., 0., 3, dest, shift, destination_color_dict[dest]) )
-
-        return Truck(rc_list, None, (100, 100, 100), t_arrive, t_arrive+DOCK_TIME)
-
-    else: # loading truck
-        return Truck(None, destination, destination_color_dict[destination], t_arrive, t_arrive+DOCK_TIME)
 
 class ProcessTruckLoad:
     def __init__(self, dock, n_roll_containers):
@@ -29,7 +18,6 @@ class ProcessTruckLoad:
         self.dock             =  dock
         self.nrc_not_assigned =  n_roll_containers
         self.out_going_truck  =  n_roll_containers==0
-
 
 def main():
     fp = FloorPlan(8)
@@ -43,14 +31,9 @@ def main():
     cv.moveWindow("Test", 10, 10)
     cv.waitKey(0)
 
-    random.seed(13)
-    truck_list = sorted([create_truck(25, None, 5.),
-                         create_truck(30, None, 80.),
-                         create_truck(20, None, 150.),
-                         create_truck(0, "Amsterdam", 420.),
-                         create_truck(0, "Apeldoorn", 360.)], key=lambda tr: tr.arrival)
+    truck_list = trucks_from_file()#get_truck_list()
 
-    fp.assign_docks(truck_list)
+    assign_docks(truck_list)
 
     truck_process_list = []
     for sample in range(2500):

@@ -1,17 +1,24 @@
 import cv2 as cv
-from FloorPlan import round_coord, round_coords, \
+from XdockParams import round_coord, round_coords, \
                       N_DOCK, W_DOCK, H_LANE, H_FLOOR, H_FRONT, H_LEFT, W_UP, W_DOWN, H_MANEUVER,\
                       N_BUFFER_STORE, W_BUFFER_STORE,  H_BUFFER_STORE, N_COMP_X, N_COMP_Y, W_COMPARTMENT, H_COMPARTMENT, \
                       BLACK
 
 class BufferStoreRow:
     def __init__(self, w_dict, h):
-        self.store  = []
-        self.w_dict = w_dict
-        self.h      = h
+        self.n_reserved = 0
+        self.store      = []
+        self.w_dict     = w_dict
+        self.h          = h
 
     def get_n_stored(self):
         return len(self.store)
+
+    def reserve_store(self):
+        self.n_reserved += 1
+
+    def is_store_available(self):
+        return self.n_reserved<N_COMP_X
 
     def store_roll_container(self, rol):
         if len(self.store)>=N_COMP_X:
@@ -29,6 +36,7 @@ class BufferStoreRow:
         if len(self.store)<=0:
             return
 
+        self.n_reserved -= 1
         return  self.store.pop(-1)
 
 class BufferStore:
@@ -71,6 +79,15 @@ class BufferStore:
         self.w_dict = dict([(col, round_coord(self.w1 + (col+0.5)*W_COMPARTMENT)) for col in range(N_COMP_X)])
         self.h_dict = dict([(row, round_coord(self.h1 + (row+0.5)*H_COMPARTMENT)) for row in range(N_COMP_Y)])
         self.store  = [BufferStoreRow(self.w_dict, self.h_dict[row]) for row in range(N_COMP_Y)]
+
+    def get_first_available_store(self, row_min, row_max):
+        for row in range(row_min, row_max):
+            if self.store[row].is_store_available():
+                return row
+        return -1
+
+    def reserve_store(self, row):
+        self.store[row].reserve_store()
 
     def store_roll_container(self, row, rol):
         if row>=N_COMP_Y: return

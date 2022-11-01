@@ -1,16 +1,16 @@
 import cv2 as cv
-from FloorPlan import W_ROLL_CONTAINER, H_ROLL_CONTAINER, BLACK
+from XdockParams import W_ROLL_CONTAINER, H_ROLL_CONTAINER, BLACK
 
 
 
 class RollContainer:
-    def __init__(self, w, h, orientation, destination, shift, color):
+    def __init__(self, w, h, orientation, destination, prio, color):
         self.w         = w
         self.h         = h
         self.o         = orientation
         self.dest      = destination
         self.col       = color
-        self.shift     = shift
+        self.prio      = prio
         self.scheduled = False
 
     def draw(self, floor_plan):
@@ -37,7 +37,7 @@ class RollContainer:
 
         floor_plan.figure = cv.circle(floor_plan.figure, pt, 5, (100, 100, 100), -1)
 
-        text = f"{self.shift:d}"
+        text = f"{self.prio:s}"
         font = cv.FONT_HERSHEY_SIMPLEX
         floor_plan.figure = cv.putText(floor_plan.figure, text, pt1, font, 0.7, BLACK)
 

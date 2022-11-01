@@ -1,11 +1,11 @@
 import cv2 as cv
 
-from Position import Position
 
-from FloorPlan import get_orientation, get_distance_city_block, get_path_len, \
-                      TIME_STEP_S, W_FLOOR, H_FLOOR, \
-                      ROBOT_SPEED, ROBOT_LOAD_TIME, ROBOT_UNLOAD_TIME, W1_ROBOT, W2_ROBOT, H1_ROBOT, H2_ROBOT, \
-                      DESTINATIONS
+from XdockParams import TIME_STEP_S, W_FLOOR, H_FLOOR, \
+                        ROBOT_SPEED, ROBOT_LOAD_TIME, ROBOT_UNLOAD_TIME, W1_ROBOT, W2_ROBOT, H1_ROBOT, H2_ROBOT, \
+                        get_orientation, get_distance_city_block, get_path_len
+from SimulationConfig import choose_store
+
 
 def print_tasks(task_list):
     for t,task in enumerate(task_list):
@@ -144,16 +144,7 @@ class Robot:
         if self.o==1 or self.o==3:    return coords[0], coords[1] + (s if self.o==1 else -s)
 
     def insert_process_pickup(self, floor_plan):
-        shift = self.rol.shift
-        dest  = self.rol.dest
-        dock  = DESTINATIONS.index(dest)
-        lane  = floor_plan.get_available_output_lane(dock)
-        if shift>5 or lane<0:
-            pos_store = Position(floor_plan, dock, buffer_store=0, row=shift, col=0)
-        else:
-            pos_store = Position(floor_plan, dock, buffer_lane=lane)
-            floor_plan.buffer_lanes[(dock, lane)].reserve_store()
-
+        pos_store = choose_store(floor_plan, self.rol)
         task_list = [RobotTask(floor_plan=floor_plan, goto_pos=pos_store),
                      RobotTask(wait=ROBOT_UNLOAD_TIME, unload_store=pos_store.get_store_object(floor_plan))]
 
