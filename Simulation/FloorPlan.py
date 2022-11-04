@@ -7,7 +7,8 @@ import inspect
 
 from XdockParams import H_FLOOR, W_FLOOR, N_DOCK, W_DOCK, N_LANE, MAX_LANE_STORE, N_BUFFER_STORE, N_COMP_X, N_COMP_Y, \
                         TIME_STEP_S, \
-                        BLACK
+                        BLACK, \
+                        get_distance_city_block
 
 from Robot import Robot
 from Dock import Dock
@@ -288,11 +289,11 @@ class FloorPlan:
         pt   = self.pnt_from_coords(W_DOCK/3, 1.01*h)
         text = f"{W_DOCK:5.1f} m"
         font = cv.FONT_HERSHEY_SIMPLEX
-        self.figure = cv.putText(self.figure, text, pt, font, 0.7, BLACK)
+        self.figure = cv.putText(self.figure, text, pt, font, 0.6, BLACK)
 
         if type(self.header_text)==str:
             pt = self.pnt_from_coords((N_DOCK-1)*W_DOCK, 1.01 * h)
-            self.figure = cv.putText(self.figure, self.header_text, pt, font, 0.7, BLACK)
+            self.figure = cv.putText(self.figure, self.header_text, pt, font, 0.6, BLACK)
 
     def __draw_circulation(self, dock):
         if dock<0 or N_DOCK<=dock: return

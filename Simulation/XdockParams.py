@@ -31,9 +31,9 @@ N_LANE         =  4   # For each dock: two up and two down
 W_LANE         =  1.1
 H_LANE         = 18.
 MAX_LANE_STORE = 24
-H_LANE_STORE   = 0.9
+H_LANE_STORE   = 0.75 # should be H_LANE/MAX_LANE_STORE and this should be larger than H_ROLL_CONTAINER
 
-N_DOCK     =  4
+N_DOCK     =  8
 
 W_FLOOR    = N_DOCK * W_DOCK
 H_FLOOR    = H_FRONT + H_LANE + H_MANEUVER + N_COMP_Y * H_COMPARTMENT + H_REAR
@@ -54,7 +54,8 @@ ROBOT_UNLOAD_TIME = 5. # [s]
 BUFFER_LANE_SPEED =  0.3
 
 MAX_TRUCK_LOAD    = 48
-DOCK_TIME         = 300. # [s]
+TRUCK_LOAD_TIME   = 10.# [s]
+DOCK_TIME         = 500. # [s]
 
 _CO_SCALE = 1000.
 def round_coord(co):

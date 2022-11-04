@@ -3,7 +3,7 @@ from collections import namedtuple
 
 from XdockParams import round_coords, \
                       N_DOCK, W_DOCK, H_FRONT, \
-                      W_LANE, H_LANE, N_LANE, H_LANE_STORE, MAX_LANE_STORE, BUFFER_LANE_SPEED, TIME_ROLL_CONTAINER_LOAD, \
+                      W_LANE, H_LANE, N_LANE, H_LANE_STORE, MAX_LANE_STORE, BUFFER_LANE_SPEED, TIME_ROLL_CONTAINER_LOAD, TRUCK_LOAD_TIME, \
                       TIME_STEP_S, \
                       BLACK, WHITE
 
@@ -23,8 +23,9 @@ class BufferLane:
         self.h1 = H_FRONT
         self.h2 = self.h1 + H_LANE
 
-        self.dead_time = 0.
-        self.store     = []
+        self.dead_time_up   = 0.
+        self.dead_time_down = 0.
+        self.store          = []
         mid  = (self.w1 + self.w2) / 2
         step = (self.h2 - self.h1 - H_LANE_STORE) / (MAX_LANE_STORE - 1)
         if self.lane_up:
@@ -53,13 +54,14 @@ class BufferLane:
             for r, rol in enumerate(self.store):
                 rol.h = max(rol.h-move, self.store_coord_dict[MAX_LANE_STORE-1-r][1])
 
-        self.dead_time += TIME_STEP_S
+        self.dead_time_up   += TIME_STEP_S
+        self.dead_time_down += TIME_STEP_S
 
     def can_be_loaded(self):
-        return len(self.store)<MAX_LANE_STORE and self.dead_time>=0.
+        return len(self.store)<MAX_LANE_STORE and self.dead_time_up>=0.
 
     def can_be_unloaded(self):
-        return len(self.store)>0 and self.store[0].h<=self.h1+H_LANE_STORE/2
+        return len(self.store)>0 and self.store[0].h<=self.h1+H_LANE_STORE/2 and self.dead_time_down>=0.
 
     def get_grid_coords(self):
         # return top store
@@ -94,9 +96,12 @@ class BufferLane:
         rol.w, rol.h = self.store_coord_dict[0]
         rol.o = 3 if self.lane_up else 1
         self.store.append(rol)
-        self.dead_time =-TIME_ROLL_CONTAINER_LOAD
+        if self.lane_up:
+            self.dead_time_up =-TIME_ROLL_CONTAINER_LOAD
 
     def pickup_roll_container(self):
         if len(self.store)>0:
             self.n_store_reserved -= 1
+            if not self.lane_up:
+                self.dead_time_down =-TRUCK_LOAD_TIME
             return self.store.pop(0)

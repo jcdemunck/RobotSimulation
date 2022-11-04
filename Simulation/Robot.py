@@ -12,11 +12,15 @@ def print_tasks(task_list):
         print(t, task.task_type)
 
 class RobotTask:
-    def __init__(self, wait=-1., floor_plan=None, goto_pos=None, load_store=None, unload_store=None):
+    def __init__(self, wait=-1., floor_plan=None, goto_pos=None, load_lane=None, load_store=None, unload=None):
         self.task_type = "no_task"
         self.finished  = True
         self.path      = []
         self.goto      = (0.,0.)
+        self.segment   = 0
+        self.offset    = 0.
+        self.wait      = 0.
+        self.store     = None
 
         if not floor_plan is None:
             if not goto_pos is None:
@@ -33,15 +37,21 @@ class RobotTask:
                     self.task_type = "goto"
                 self.finished = False
 
+        elif not load_lane is None:
+            self.wait      = wait
+            self.store     = load_lane
+            self.task_type = "pickup_lane"
+            self.finished  = False
+
         elif not load_store is None:
             self.wait      = wait
             self.store     = load_store
-            self.task_type = "pickup"
+            self.task_type = "pickup_store"
             self.finished  = False
 
-        elif not unload_store is None:
+        elif not unload is None:
             self.wait      = wait
-            self.store     = unload_store
+            self.store     = unload
             self.task_type = "unload"
             self.finished  = False
 
@@ -49,6 +59,16 @@ class RobotTask:
             self.wait      = wait
             self.task_type = "wait"
             self.finished  = self.wait<=0.
+
+    def __str__(self):
+        text  = f"task = {self.task_type:s} \n"
+        text += f"finished = {str(self.finished):s} \n"
+        text += f"segment = {self.segment:d}\n"
+        text += f"offset = {self.offset:f}\n"
+        if len(self.path)>0: text+=f"p0={str(self.path[0]):s}\n"
+        text += f"goto = {str(self.goto):s}\n"
+        text += f"wait = {self.wait:f}\n"
+        return text
 
     def set_start_point(self, floor_plan, coords_from):
         if len(self.path)<=0:
@@ -59,12 +79,19 @@ class RobotTask:
         if self.task_type[0:4]=="goto":
             if len(self.path)==0:
                 self.path = floor_plan.grid_graph.get_shortest_path((robot.w,robot.h), self.goto)
+
+                if len(self.path)==0:
+                    print("EROR: Robot.time_step(). Path not found.")
+                    print(robot.ID, (robot.w,robot.h), (robot.w,robot.h) in floor_plan.grid_graph.v_neighbors)
+                    print(self)
+
             elif self.segment>=len(self.path)-1:
                 self.path     = []
                 self.finished = True
                 return
 
             step_todo = TIME_STEP_S * ROBOT_SPEED
+
             p_begin   = robot.get_coords_offset(self.path[self.segment], self.offset)
             for p_end in self.path[self.segment + 1:]:
                 d = get_distance_city_block(p_begin, p_end)
@@ -88,7 +115,7 @@ class RobotTask:
             robot.set_coords(self.path[-1])
             self.finished = True
 
-        elif self.task_type=="pickup":
+        elif self.task_type=="pickup_lane" or self.task_type=="pickup_store":
             if self.wait<=0:
                 robot.load_roll_container(self.store.pickup_roll_container())
                 self.finished = True
@@ -117,6 +144,7 @@ class RobotTask:
         return TIME_STEP_S
 
 class Robot:
+    lastID = 0
     def __init__(self, w, h, parking_pos):
         self.w           = w
         self.h           = h
@@ -125,13 +153,11 @@ class Robot:
         self.col         = (200, 0, 0)
         self.rol         = None
         self.default_pos = parking_pos
-
+        self.ID          = Robot.lastID
+        Robot.lastID    += 1
         self._update_rot_mat()
 
         self.task_list = []
-
-    def get_default_pos(self):
-        return self.default_pos
 
     def set_coords(self, pos):
         self.w, self.h = pos
@@ -142,21 +168,6 @@ class Robot:
     def get_coords_offset(self, coords, s):
         if self.o==0 or self.o==2:    return coords[0] + (s if self.o==0 else -s), coords[1]
         if self.o==1 or self.o==3:    return coords[0], coords[1] + (s if self.o==1 else -s)
-
-    def insert_process_pickup(self, floor_plan):
-        pos_store = choose_store(floor_plan, self.rol)
-        task_list = [RobotTask(floor_plan=floor_plan, goto_pos=pos_store),
-                     RobotTask(wait=ROBOT_UNLOAD_TIME, unload_store=pos_store.get_store_object(floor_plan))]
-
-        # insert new tasks
-        self.task_list = task_list+self.task_list
-
-        # append goto parking
-        for ta in reversed(self.task_list):
-            if len(ta.path)>0:
-                if ta.task_type!="goto_parking":
-                    self.task_list.append(RobotTask(floor_plan=floor_plan, goto_pos=self.get_default_pos()))
-                break
 
     def time_step(self, floor_plan):
         if len(self.task_list)<=0: return
@@ -170,8 +181,8 @@ class Robot:
         task.time_step(self, floor_plan)
         if task.finished:
             self.task_list.pop(0)
-            if task.task_type=="pickup":
-                self.insert_process_pickup(floor_plan)
+            if task.task_type=="pickup_lane": # Pickup task finished. Insert goto.
+                self.__insert_process_incoming(floor_plan)
 
     def get_time_to_pos(self, floor_plan, pos):
         coords1  = (self.w, self.h)
@@ -197,27 +208,75 @@ class Robot:
             time_to_finish += task.get_time_to_finish()
         return time_to_finish
 
-    def wait_goto_pickup(self, floor_plan, wait, pos_pickup):
+    def wait_process_incoming(self, floor_plan, wait, pos_pickup):
         if not self.rol is None:
-            print("ERROR: RollContainer.wait_goto_pickup(). roll container already loaded")
+            print("ERROR: RollContainer.wait_process_incoming(). roll container already loaded")
             return
 
         self.task_list = [RobotTask(wait=wait),
                           RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
-                          RobotTask(wait=ROBOT_LOAD_TIME, load_store=pos_pickup.get_store_object(floor_plan)),
-                          RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos)]
+                          RobotTask(wait=ROBOT_LOAD_TIME, load_lane=pos_pickup.get_store_object(floor_plan)),
+                          RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos),
+                          RobotTask()]
 
-    def append_goto_pickup(self, floor_plan, pos_pickup):
-        task_list   = []
+    def append_process_incoming(self, floor_plan, pos_pickup):
+        task_list = []
+        parking   = False
         for task in self.task_list:
-            if task.task_type=="goto_parking" or task.task_type=="no_task":
+            if task.task_type=="goto_parking":
+                parking = True
+            if parking and task.task_type=="no_task":
                 break
             task_list.append(task)
 
         self.task_list = task_list +  \
                         [RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
+                         RobotTask(wait=ROBOT_LOAD_TIME, load_lane=pos_pickup.get_store_object(floor_plan)),
+                         RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos),
+                         RobotTask()]
+
+    def insert_process_store(self, floor_plan, pos_pickup, pos_unload):
+        task_list   = []
+        t_pickup    = -1
+        parking     = False
+        for t,task in enumerate(self.task_list):
+            if task.task_type=="goto_parking:":
+                parking = True
+            if parking and task.task_type=="no_task":
+                break
+            task_list.append(task)
+            if task.task_type=="pickup_lane":
+                t_pickup = t+1
+                break
+
+        task_list = task_list +  \
+                        [RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
                          RobotTask(wait=ROBOT_LOAD_TIME, load_store=pos_pickup.get_store_object(floor_plan)),
-                         RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos)]
+                         RobotTask(floor_plan=floor_plan, goto_pos=pos_unload),
+                         RobotTask(wait=ROBOT_UNLOAD_TIME, unload=pos_unload.get_store_object(floor_plan)),
+                         RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos),
+                         RobotTask()]
+
+        if 0<t_pickup<len(task_list):
+            self.task_list = task_list + self.task_list[t_pickup:]
+        else:
+            self.task_list = task_list
+
+    def __insert_process_incoming(self, floor_plan):
+        pos_store = choose_store(floor_plan, self.rol)
+        task_list = [RobotTask(floor_plan=floor_plan, goto_pos=pos_store),
+                     RobotTask(wait=ROBOT_UNLOAD_TIME, unload=pos_store.get_store_object(floor_plan))]
+
+        # insert new tasks
+        self.task_list = task_list+self.task_list
+
+        # append goto parking
+        for ta in reversed(self.task_list):
+            if len(ta.path)>0:
+                if ta.task_type!="goto_parking":
+                    self.task_list +=[RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos),
+                                      RobotTask()]
+                break
 
     def is_idle(self):
         return len(self.task_list)==0

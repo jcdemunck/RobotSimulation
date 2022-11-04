@@ -6,10 +6,10 @@ from XdockParams import round_coord, round_coords, \
 
 class BufferStoreRow:
     def __init__(self, w_dict, h):
-        self.n_reserved = 0
-        self.store      = []
-        self.w_dict     = w_dict
-        self.h          = h
+        self.n_reserved  = 0 # number of places reserved for storage
+        self.store       = []
+        self.w_dict      = w_dict
+        self.h           = h
 
     def get_n_stored(self):
         return len(self.store)
@@ -31,13 +31,25 @@ class BufferStoreRow:
         rol.o = 2
 
         self.store.append(rol)
+        self.store.sort(key=lambda r:r.scheduled)
+        for col, rol in enumerate(self.store):
+            rol.w = self.w_dict[col]
+
+    def get_n_not_scheduled(self):
+        return len([r for r in self.store if not r.scheduled])
+
+    def schedule_roll_container(self):
+        for rol in reversed(self.store):
+            if rol.scheduled: continue
+            rol.scheduled = True
+            return
 
     def pickup_roll_container(self):
         if len(self.store)<=0:
             return
 
         self.n_reserved -= 1
-        return  self.store.pop(-1)
+        return self.store.pop(-1)
 
 class BufferStore:
     def __init__(self, dock, buffer):
@@ -79,6 +91,15 @@ class BufferStore:
         self.w_dict = dict([(col, round_coord(self.w1 + (col+0.5)*W_COMPARTMENT)) for col in range(N_COMP_X)])
         self.h_dict = dict([(row, round_coord(self.h1 + (row+0.5)*H_COMPARTMENT)) for row in range(N_COMP_Y)])
         self.store  = [BufferStoreRow(self.w_dict, self.h_dict[row]) for row in range(N_COMP_Y)]
+
+    def schedule_roll_container(self, row):
+        self.store[row].schedule_roll_container()
+
+    def get_row_not_scheduled(self):
+        for row in range(N_COMP_Y):
+            if self.store[row].get_n_not_scheduled()>0:
+                return row
+        return -1
 
     def get_first_available_store(self, row_min, row_max):
         for row in range(row_min, row_max):
