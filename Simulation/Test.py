@@ -1,15 +1,21 @@
 import cv2 as cv
-
+import numpy as np
+from pathlib import Path
 
 from FloorPlan import FloorPlan
 from Position import Position
 
 from XdockParams import TIME_STEP_S, N_DOCK, TIME_ROLL_CONTAINER_LOAD, N_BUFFER_STORE
-from SimulationConfig import DESTINATIONS, destination_color_dict, destination_from_dock
+from SimulationConfig import destination_color_dict, destination_from_dock
 from Truck import get_truck_list, trucks_from_file
 
 
 TIME_LOAD_TOTAL = 1.5*TIME_ROLL_CONTAINER_LOAD
+
+N_VIDEO_FRAME  = -1
+video_out      = None
+im_list        = []
+DIR_VIDEO      = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/Video/"
 
 class ProcessTruckLoad:
     def __init__(self, dock, n_roll_containers):
@@ -23,29 +29,27 @@ def main():
     for dock in range(N_DOCK):
         fp.docks[dock].set_color(destination_color_dict[destination_from_dock(dock)])
 
+
+    if N_VIDEO_FRAME>0:
+        frame_size = (fp.fig_width, fp.fig_height)
+        video_out  = cv.VideoWriter("test0.avi", cv.VideoWriter_fourcc(*"MJPG"), 20., frame_size)
+
     fp.header_text = "time="
     fp.draw(draw_circulation=False, draw_grid=True)
-
-    pt = fp.pnt_from_coords(10.0, 22.675)
-    fp.figure = cv.circle(fp.figure, pt, 5, (0, 0, 255), -2)
-    pt = fp.pnt_from_coords(37.05, 19.625)
-    fp.figure = cv.circle(fp.figure, pt, 5, (0, 0, 255), -2)
 
     fp.imshow("Test")
     cv.setWindowTitle("Test", "X-dock")
     cv.moveWindow("Test", 10, 10)
-
-
-
     cv.waitKey(0)
+
 
     truck_list = get_truck_list() # trucks_from_file()#
 
-    t_start = truck_list[ 0].arrival
-    t_end   = truck_list[-1].departure + 1000.
+    samp_start = int( truck_list[ 0].arrival           /TIME_STEP_S)
+    samp_end   = int((truck_list[-1].departure + 1000.)/TIME_STEP_S)
 
     truck_process_list = []
-    for sample in range(int(t_start/TIME_STEP_S), int(t_end/TIME_STEP_S)):
+    for sample in range(samp_start, samp_end):
         time_sec       = sample*TIME_STEP_S
         fp.header_text = f"t={int(time_sec)//3600:2d}:{(int(time_sec)//60)%60:2d}:{int(time_sec)%60:02d}"
 
@@ -106,6 +110,16 @@ def main():
         elif k&0xFF==ord('q'):
             break
 
+        frame = sample-samp_start
+        if frame<N_VIDEO_FRAME:
+            im_list.append(np.copy(fp.figure))
+        if frame==N_VIDEO_FRAME or sample==samp_end:
+            for im in im_list:
+                video_out.write(im)
+            video_out.release()
+            Path(DIR_VIDEO+"test0.avi").unlink(missing_ok=True)
+            Path("test0.avi").rename(DIR_VIDEO+"test0.avi")
+            break
     cv.waitKey(0)
     cv.destroyAllWindows()
 
