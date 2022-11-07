@@ -6,7 +6,7 @@ from FloorPlan import FloorPlan
 from Position import Position
 
 from XdockParams import TIME_STEP_S, N_DOCK, TIME_ROLL_CONTAINER_LOAD, N_BUFFER_STORE
-from SimulationConfig import destination_color_dict, destination_from_dock
+from SimulationConfig import set_dock_names_colors
 from Truck import get_truck_list, trucks_from_file
 
 
@@ -26,16 +26,14 @@ class ProcessTruckLoad:
 
 def main():
     fp = FloorPlan(2*N_DOCK)
-    for dock in range(N_DOCK):
-        fp.docks[dock].set_color(destination_color_dict[destination_from_dock(dock)])
-
+    set_dock_names_colors(fp)
 
     if N_VIDEO_FRAME>0:
         frame_size = (fp.fig_width, fp.fig_height)
         video_out  = cv.VideoWriter("test0.avi", cv.VideoWriter_fourcc(*"MJPG"), 20., frame_size)
 
     fp.header_text = "time="
-    fp.draw(draw_circulation=False, draw_grid=True)
+    fp.draw(draw_circulation=True, draw_grid=False)
 
     fp.imshow("Test")
     cv.setWindowTitle("Test", "X-dock")
@@ -43,8 +41,8 @@ def main():
     cv.waitKey(0)
 
 
-    truck_list = get_truck_list() # trucks_from_file()#
 
+    truck_list = get_truck_list() #trucks_from_file()  #
     samp_start = int( truck_list[ 0].arrival           /TIME_STEP_S)
     samp_end   = int((truck_list[-1].departure + 1000.)/TIME_STEP_S)
 
@@ -110,16 +108,17 @@ def main():
         elif k&0xFF==ord('q'):
             break
 
-        frame = sample-samp_start
-        if frame<N_VIDEO_FRAME:
-            im_list.append(np.copy(fp.figure))
-        if frame==N_VIDEO_FRAME or sample==samp_end:
-            for im in im_list:
-                video_out.write(im)
-            video_out.release()
-            Path(DIR_VIDEO+"test0.avi").unlink(missing_ok=True)
-            Path("test0.avi").rename(DIR_VIDEO+"test0.avi")
-            break
+        if N_VIDEO_FRAME>0:
+            frame = sample-samp_start
+            if frame<N_VIDEO_FRAME:
+                im_list.append(np.copy(fp.figure))
+            if frame==N_VIDEO_FRAME or sample==samp_end:
+                for im in im_list:
+                    video_out.write(im)
+                video_out.release()
+                Path(DIR_VIDEO+"test0.avi").unlink(missing_ok=True)
+                Path("test0.avi").rename(DIR_VIDEO+"test0.avi")
+                break
     cv.waitKey(0)
     cv.destroyAllWindows()
 

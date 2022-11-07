@@ -94,7 +94,7 @@ class BufferLane:
         if len(self.store)>=MAX_LANE_STORE: return
 
         rol.w, rol.h = self.store_coord_dict[0]
-        rol.o = 3 if self.lane_up else 1
+        rol.o = 1 if self.lane_up else 3
         self.store.append(rol)
         if self.lane_up:
             self.dead_time_up =-TIME_ROLL_CONTAINER_LOAD

@@ -8,7 +8,7 @@ import inspect
 from XdockParams import H_FLOOR, W_FLOOR, N_DOCK, W_DOCK, N_LANE, MAX_LANE_STORE, N_BUFFER_STORE, N_COMP_X, N_COMP_Y, \
                         TIME_STEP_S, \
                         BLACK, \
-                        get_distance_city_block
+                        get_distance_city_block, get_distance
 
 from Robot import Robot
 from Dock import Dock
@@ -244,8 +244,8 @@ class FloorPlan:
         for e in self.grid_graph.get_edge_list():
             pt1 = self.pnt_from_coords(*e[0])
             pt2 = self.pnt_from_coords(*e[1])
-            l   = np.sqrt((pt1[0]-pt2[0])*(pt1[0]-pt2[0]) + (pt1[1]-pt2[1])*(pt1[1]-pt2[1]))
-            self.figure = cv.arrowedLine(self.figure, pt1, pt2, color, 2, tipLength=5/l if l>0. else 0.)
+            l   = get_distance(pt1, pt2)
+            self.figure = cv.arrowedLine(self.figure, pt1, pt2, color, 1, tipLength=5/l if l>0. else 0.)
             self.figure = cv.circle(self.figure, pt1, 3, color, -1)
             self.figure = cv.circle(self.figure, pt2, 3, color, -1)
 

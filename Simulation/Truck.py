@@ -75,7 +75,7 @@ def trucks_from_file(max_in=-1, max_out=-1):
             dest  = row["destination"]
             shift = row["shift"]
             if dest not in DESTINATIONS or shift not in [1,2]: continue
-            prios = []
+            prios = [PRIO_LIST[0]] if shift==1 else [PRIO_LIST[1]]
             truck_list.append(Truck(t_arrive, t_arrive + DOCK_TIME, destination_color_dict[dest], destination=dest, prios=prios))
             n_out +=1
 
@@ -132,7 +132,7 @@ def assign_docks(truck_list):
         if truck.destination is None:
             truck.dock = find_dock(truck.arrival, truck.departure)
             if truck.dock<0:
-                print("ERROR. assign_docks(). No dock found for: ", (truck.arrival, truck.departure))
+                print("ERROR. assign_docks(). No dock found for: ", t, truck)
                 print("\toccupation")
                 for d in range(N_DOCK):
                     print("\t",dock_dict[d])

@@ -35,7 +35,7 @@ class RollContainer:
         else:
             return
 
-        floor_plan.figure = cv.circle(floor_plan.figure, pt, 5, (100, 100, 100), -1)
+        floor_plan.figure = cv.circle(floor_plan.figure, pt, int((pt2[0]-pt1[0])/2), (100, 100, 100), -1)
 
         text = f"{self.prio:s}"
         font = cv.FONT_HERSHEY_SIMPLEX

@@ -1,15 +1,26 @@
 
-from XdockParams import N_COMP_Y
+from XdockParams import N_COMP_Y, N_DOCK
 from Position import Position
 
 
 PRIO_LIST               = ['A','B']
 MAX_PRIO                = len(PRIO_LIST)
-DESTINATIONS            = ["ALR","AP","KHM","UT"]
-destination_color_dict  = {"ALR": (0,255,200), "AP": (255,200,0), "KHM":(100,100,255), "UT":(100,0,50)}
+DESTINATIONS            = ["ALR","AP","KHM","UT"] + ["LW", "ZL", "HGL", "ELT"]
+destination_color_dict  = {"ALR": (0,255,200), "AP": (255,200,0), "KHM":(100,100,255), "UT":(100,0,50),
+                           "LW" : (255,0,0),   "ZL": (255,255,0), "HGL":(0,255,200),   "ELT":(0,0,255)}
+
+def set_dock_names_colors(floor_plan):
+    for dock in range(N_DOCK):
+        dest = destination_from_dock(dock)
+        prio = prio_from_dock(dock)
+
+        floor_plan.docks[dock].set_color(destination_color_dict[dest])
+        floor_plan.docks[dock].set_name(dest+"-"+prio)
 
 def destination_from_dock(dock):
     return DESTINATIONS[int(dock//MAX_PRIO)]
+def prio_from_dock(dock):
+    return PRIO_LIST[dock%MAX_PRIO]
 
 def get_output_dock(dest, prio):
     if type(prio)==list:

@@ -7,7 +7,7 @@ BLACK = (0,0,0)
 H_COMPARTMENT  = 0.9
 W_COMPARTMENT  = 0.9
 N_COMP_X       = 4 ## 3
-N_COMP_Y       = 12
+N_COMP_Y       = 24 ##12
 N_BUFFER_STORE = 1 ##2
 W_BUFFER_STORE = N_COMP_X*W_COMPARTMENT
 H_BUFFER_STORE = N_COMP_Y*H_COMPARTMENT
@@ -33,7 +33,7 @@ H_LANE         = 18.
 MAX_LANE_STORE = 24
 H_LANE_STORE   = 0.75 # should be H_LANE/MAX_LANE_STORE and this should be larger than H_ROLL_CONTAINER
 
-N_DOCK     =  8
+N_DOCK     =  16
 
 W_FLOOR    = N_DOCK * W_DOCK
 H_FLOOR    = H_FRONT + H_LANE + H_MANEUVER + N_COMP_Y * H_COMPARTMENT + H_REAR
@@ -47,7 +47,7 @@ W2_ROBOT = 0.9
 H1_ROBOT = 0.7
 H2_ROBOT = 0.4
 
-TIME_STEP_S       =  0.3
+TIME_STEP_S       =  2.0#0.3
 ROBOT_SPEED       =  1.0  # (1.2) m/s
 ROBOT_LOAD_TIME   = 5. # [s]
 ROBOT_UNLOAD_TIME = 5. # [s]
@@ -55,7 +55,7 @@ BUFFER_LANE_SPEED =  0.3
 
 MAX_TRUCK_LOAD    = 48
 TRUCK_LOAD_TIME   = 10.# [s]
-DOCK_TIME         = 500. # [s]
+DOCK_TIME         = 410.#500. # [s]
 
 _CO_SCALE = 1000.
 def round_coord(co):
