@@ -70,11 +70,6 @@ class RobotTask:
         text += f"wait = {self.wait:f}\n"
         return text
 
-    def set_start_point(self, floor_plan, coords_from):
-        if len(self.path)<=0:
-            return
-        self.path = floor_plan.grid_graph.get_shortest_path(coords_from, self.path[-1])
-
     def time_step(self, robot, floor_plan):
         if self.task_type[0:4]=="goto":
             if len(self.path)==0:

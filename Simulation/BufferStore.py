@@ -130,6 +130,9 @@ class BufferStore:
         else:
             return self.w_dict[col], self.h_dict[row]
 
+    def get_store_positions(self):
+        return [self.get_grid_coords(row, 0) for row in range(N_COMP_Y)]
+
     def get_lowest_row_coords(self, left=True):
         if left: return round_coords((self.w1_ext, self.h1 + 0.5 * H_COMPARTMENT))
         else:    return round_coords((self.w2_ext, self.h1 + 0.5 * H_COMPARTMENT))

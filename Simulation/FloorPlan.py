@@ -43,15 +43,19 @@ class FloorPlan:
         self.buffer_stores = dict()
         self.parkings      = dict()
         self.docks         = dict()
+        pos_list           = []
         for dock in range(N_DOCK):
             self.docks[dock]    = Dock(dock)
             self.parkings[dock] = Parking(dock)
+            pos_list           += self.parkings[dock].get_park_positions()
             for lane in range(N_LANE):
                 self.buffer_lanes[(dock, lane)]  = BufferLane(dock, lane)
+                pos_list                        += [self.buffer_lanes[(dock, lane)].get_grid_coords()]
             for store in range(N_BUFFER_STORE):
                 self.buffer_stores[(dock,store)] = BufferStore(dock, store)
-
+                pos_list                        += self.buffer_stores[(dock, store)].get_store_positions()
         self.grid_graph = self.__create_grid()
+        self.path_table = GT.PathTable(self.grid_graph, pos_list, get_distance_city_block)
 
         self.robots = []
         for r in range(n_robots):
@@ -265,7 +269,7 @@ class FloorPlan:
     def get_shortest_path(self, pos1, pos2):
         coords1 = pos1.get_coords()
         coords2 = pos2.get_coords()
-        return self.grid_graph.get_shortest_path(coords1, coords2, get_distance_city_block)
+        return self.path_table.get_path(coords1, coords2)
 
     def draw_path(self, path, color=(255,0,0)):
         p1 = path[0]

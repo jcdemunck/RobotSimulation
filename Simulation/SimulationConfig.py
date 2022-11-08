@@ -5,7 +5,7 @@ from Position import Position
 
 PRIO_LIST               = ['A','B']
 MAX_PRIO                = len(PRIO_LIST)
-DESTINATIONS            = ["ALR","AP","KHM","UT"] + ["LW", "ZL", "HGL", "ELT"]
+DESTINATIONS            = ["ALR","AP","KHM","UT"]# + ["LW", "ZL", "HGL", "ELT"]
 destination_color_dict  = {"ALR": (0,255,200), "AP": (255,200,0), "KHM":(100,100,255), "UT":(100,0,50),
                            "LW" : (255,0,0),   "ZL": (255,255,0), "HGL":(0,255,200),   "ELT":(0,0,255)}
 
@@ -19,6 +19,7 @@ def set_dock_names_colors(floor_plan):
 
 def destination_from_dock(dock):
     return DESTINATIONS[int(dock//MAX_PRIO)]
+
 def prio_from_dock(dock):
     return PRIO_LIST[dock%MAX_PRIO]
 

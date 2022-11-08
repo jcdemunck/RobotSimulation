@@ -39,6 +39,9 @@ class Parking:
 
         return self.coord_dict[park]
 
+    def get_park_positions(self):
+        return [self.get_grid_coords(park) for park in range(self.n_parc_spot)]
+
     def draw(self, floor_plan):
         pt1 = floor_plan.pnt_from_coords(self.w1, self.h1)
         pt2 = floor_plan.pnt_from_coords(self.w2, self.h2)

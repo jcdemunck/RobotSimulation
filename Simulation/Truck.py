@@ -32,13 +32,15 @@ def get_truck_list():
                          create_truck(48, None, 150.),
                          create_truck(48, None, 150.),
                          create_truck(48, None, 510.),
+                         create_truck(48, None, 150.),
+                         create_truck(48, None, 510.),
                          create_truck(48, None, 600.),
                          create_truck(48, None, 600.),
                          create_truck(0, "ALR", 700., high_prio=True),
                          create_truck(0, "ALR", 300., high_prio=False),
                          create_truck(0, "ALR",1210., high_prio=True),
                          create_truck(0, "ALR",810., high_prio=False),
-                         create_truck(0, "AP", 360., high_prio=True)], key=lambda tr: tr.arrival)
+                         create_truck(0, "AP", 2000., high_prio=True)], key=lambda tr: tr.arrival)
     assign_docks(truck_list)
     return truck_list
 
