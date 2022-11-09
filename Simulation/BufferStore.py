@@ -81,6 +81,11 @@ class BufferStore:
         self.h_dict = dict([(row, round_coord(self.h1 + (row+0.5)*H_COMPARTMENT)) for row in range(N_COMP_Y)])
         self.store  = [BufferStoreRow(self.w_dict, self.h_dict[row]) for row in range(N_COMP_Y)]
 
+    def is_store_unused(self):
+        for row_store in self.store:
+            if row_store.n_reserved>0: return False
+        return True
+
     def schedule_roll_container(self, row):
         self.store[row].schedule_roll_container()
 
@@ -90,8 +95,8 @@ class BufferStore:
                 return row
         return -1
 
-    def get_first_available_store(self, row_min, row_max):
-        for row in range(row_min, row_max):
+    def get_first_available_store(self):
+        for row in range(N_COMP_Y):
             if self.store[row].is_store_available():
                 return row
         return -1

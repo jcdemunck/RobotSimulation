@@ -21,12 +21,9 @@ def get_next_incoming(truck_list, t_start):
 def get_truck_list():
     def create_truck(nrc, destination, t_arrive, high_prio=None):
         if destination is None:  # unloading truck
-            rc_list = []
-            for t in range(nrc):
-                dest = random.choice(DESTINATIONS)
-                prio = random.choice(PRIO_LIST)
-                rc_list.append(RollContainer(0., 0., 3, dest, prio, destination_color_dict[dest]))
-
+            dest_list = random.choices(DESTINATIONS, weights=[np.exp(n) for n in range(len(DESTINATIONS))], k=nrc)
+            prio_list = random.choices(PRIO_LIST, weights=[np.exp(n) for n in range(len(PRIO_LIST))], k=nrc)
+            rc_list   = [RollContainer(0., 0., 3, dest, prio, destination_color_dict[dest]) for (dest, prio) in zip(dest_list, prio_list)]
             return Truck(t_arrive, t_arrive + DOCK_TIME, (100, 100, 100), roll_containers=rc_list)
 
         else:  # loading truck
@@ -36,20 +33,25 @@ def get_truck_list():
     truck_list = sorted([create_truck(48, None, 0.),
                          create_truck(48, None, 0.),
                          create_truck(48, None, 60.),
+                         create_truck(48, None, 60.),
+                         create_truck(48, None, 60.),
                          create_truck(48, None, 700.),
                          create_truck(48, None, 700.),
                          create_truck(48, None, 150.),
                          create_truck(48, None, 150.),
-                         create_truck(48, None, 510.),
+                         create_truck(48, None, 150.),
                          create_truck(48, None, 150.),
                          create_truck(48, None, 510.),
+                         create_truck(48, None, 510.),
+                         create_truck(48, None, 510.),
+                         create_truck(48, None, 510.),
                          create_truck(48, None, 600.),
                          create_truck(48, None, 600.),
-                         create_truck(0, "ALR", 700., high_prio=True),
-                         create_truck(0, "ALR", 300., high_prio=False),
-                         create_truck(0, "ALR",1210., high_prio=True),
-                         create_truck(0, "ALR",810., high_prio=False),
-                         create_truck(0, "AP", 2000., high_prio=True)], key=lambda tr: tr.arrival)
+                         create_truck(0, "ELT",1500., high_prio=False),
+                         create_truck(0, "ELT",2400., high_prio=False),
+                         create_truck(0, "ELT",2110., high_prio=True),
+                         create_truck(0, "ELT",1800., high_prio=False),
+                         create_truck(0, "HGL", 2000., high_prio=True)], key=lambda tr: tr.arrival)
     assign_docks(truck_list)
     return truck_list
 

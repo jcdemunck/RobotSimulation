@@ -181,8 +181,8 @@ class FloorPlan:
                     digraph.add_edge(p, p_orig)  # step up
                 p_old = p
 
-            digraph.add_edge(p_old, path_right[-1])    # last step to the right (lower right parking corner)
-            digraph.add_edge(path_right[-1], p_park_2) # up right of parking
+            digraph.add_edge(p_old, p_park_1)    # last step to the right (lower right parking corner)
+            digraph.add_edge(p_park_1, p_park_2) # up right of parking
 
             p_left_most_buffer_coords  = self.buffer_stores[(dock,0)].get_grid_coords(corner=0)
             p_right_most_buffer_coords = self.buffer_stores[(dock,0)].get_grid_coords(corner=1)

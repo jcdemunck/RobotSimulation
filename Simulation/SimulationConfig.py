@@ -40,7 +40,7 @@ def choose_store(floor_plan, roll_container):
         row   = -1
         for store in range(N_BUFFER_STORE):
             buffer_store = floor_plan.buffer_stores[(dock, store)]
-            row = buffer_store.get_first_available_store(0, N_COMP_Y)
+            row = buffer_store.get_first_available_store()
             if row>=0: break
 
         if row<0:
