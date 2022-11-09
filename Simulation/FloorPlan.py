@@ -90,6 +90,11 @@ class FloorPlan:
         for rob in self.robots:
             rob.time_step(self)
 
+    def are_all_robots_idle(self):
+        for rob in self.robots:
+            if not rob.is_idle(): return False
+        return True
+
     def get_incoming_roll_containers(self, dock):
         roll_containers = []
         for lane in range(N_LANE):
@@ -158,7 +163,6 @@ class FloorPlan:
             p_park_3  = park.get_grid_coords(corner=3) # upper left
 
             # edges around parking
-
             path_right = [p_park_0, p_park_1] +\
                          [coord for coord in park.coord_dict.values()] +\
                          [self.buffer_lanes[(dock, lane)].get_grid_coords() for lane in range(N_LANE)]
@@ -177,46 +181,44 @@ class FloorPlan:
                     digraph.add_edge(p, p_orig)  # step up
                 p_old = p
 
-            digraph.add_edge(p_old, path_right[-1]) # last step to the right (lower right parking corner)
+            digraph.add_edge(p_old, path_right[-1])    # last step to the right (lower right parking corner)
             digraph.add_edge(path_right[-1], p_park_2) # up right of parking
 
-            p_left_most_buffer_coords  = self.buffer_stores[(dock,0               )].get_lowest_row_coords(left=True )
-            p_right_most_buffer_coords = self.buffer_stores[(dock,N_BUFFER_STORE-1)].get_lowest_row_coords(left=False)
-            path_left = [coord for coord in park.coord_dict.values()] + \
-                        [self.buffer_stores[(dock,store)].get_lowest_row_coords(left=True) for store in range(1,N_BUFFER_STORE)] +\
-                        [p_left_most_buffer_coords, p_right_most_buffer_coords]
-
-            path_left  = sorted(path_left,key = lambda wh: wh[0], reverse=True) # origins of points below and above path above parking to the left
+            p_left_most_buffer_coords  = self.buffer_stores[(dock,0)].get_grid_coords(corner=0)
+            p_right_most_buffer_coords = self.buffer_stores[(dock,0)].get_grid_coords(corner=1)
+            path_left = [p_left_most_buffer_coords] + [coord for coord in park.coord_dict.values()] + [p_right_most_buffer_coords]
+            path_left = sorted(path_left,key = lambda wh: wh[0], reverse=True) # origins of points below and above path above parking to the left
 
             p_old = p_park_2 # right most point
             h     = p_old[1]
             for p_orig in path_left[1:-1]:
                 p = (p_orig[0],h)
                 digraph.add_edge(p_old, p)   # step to left
-                if p_orig[1]<h:
-                    digraph.add_edge(p, p_orig)
-                else:
-                    digraph.add_edge(p_orig, p)
+                digraph.add_edge(p, p_orig)  # step downwards
                 p_old = p
 
             digraph.add_edge(p_old   , p_park_3)  # last step to the left
+            digraph.add_edge(p_left_most_buffer_coords, p_park_3) # leftmost down
             digraph.add_edge(p_park_2, p_right_most_buffer_coords) # rightmost up
 
             # edges around each buffer store
             for store in range(N_BUFFER_STORE):
                 buffer = self.buffer_stores[(dock,store)]
-                w2, h2 = buffer.get_grid_coords(corner=2)
+                w2, h2 = buffer.get_grid_coords(corner=2) # upper right
                 q      = (w2, buffer.get_grid_coords(row=0, col=N_COMP_X-1)[1])
+
+                # below buffer
+                digraph.add_edge(buffer.get_grid_coords(corner=0), buffer.get_grid_coords(corner=1))
+                # right of buffer, lower part
+                digraph.add_edge(buffer.get_grid_coords(corner=1), q)
+
                 for row in range(N_COMP_Y):
                     p_new = buffer.get_grid_coords(row=row, col=N_COMP_X-1)
-                    q_new     = (w2,p_new[1])
+                    q_new = (w2,p_new[1])
                     digraph.add_edge(q_new, p_new) # left and right to first store
                     digraph.add_edge(p_new, q_new)
                     if row>0:
-                        if store==N_BUFFER_STORE-1:
-                            digraph.add_edge(q, q_new) # step up
-                        else:
-                            digraph.add_edge(q_new, q)  # step down
+                        digraph.add_edge(q, q_new) # step up
                         q = q_new
 
                     for col in range(N_COMP_X-2, -1, -1):
@@ -224,22 +226,32 @@ class FloorPlan:
                         digraph.add_edge(p_old, p_new)     # left and right to store at column col
                         digraph.add_edge(p_new, p_old)
                         p_new = p_old
-
-                # Above buffer
-                if store==N_BUFFER_STORE-1:
-                    digraph.add_edge(q, (w2,h2)) # step up
-                else:
-                    digraph.add_edge((w2,h2), q)  # step down
-                digraph.add_edge((w2,h2), buffer.get_grid_coords(corner=3))
+                # right of buffer, upper part
+                digraph.add_edge(q, buffer.get_grid_coords(corner=2))
+                # above buffer
+                digraph.add_edge(buffer.get_grid_coords(corner=2), buffer.get_grid_coords(corner=3))
+                # left of buffer
                 digraph.add_edge(buffer.get_grid_coords(corner=3), buffer.get_grid_coords(corner=0))
+
+                #connect buffers
+                if store>0:
+                    buffer_old = self.buffer_stores[(dock,store-1)]
+                    digraph.add_edge(buffer_old.get_grid_coords(corner=2), buffer.get_grid_coords(corner=1))
+                    digraph.add_edge(buffer.get_grid_coords(corner=0), buffer_old.get_grid_coords(corner=3))
+
 
         # connect dock grids
         for dock in range(N_DOCK-1):
+            # connect parkings
             digraph.add_edge(self.parkings[dock  ].get_grid_coords(corner=1), self.parkings[dock+1].get_grid_coords(corner=0))
             digraph.add_edge(self.parkings[dock+1].get_grid_coords(corner=3), self.parkings[dock  ].get_grid_coords(corner=2))
 
-            digraph.add_edge(self.buffer_stores[(dock+1,0)               ].get_grid_coords(corner=3),
-                             self.buffer_stores[(dock  ,N_BUFFER_STORE-1)].get_grid_coords(corner=2))
+            # connect buffer stores
+            for store in range(N_BUFFER_STORE):
+                buffer  = self.buffer_stores[(dock  , store)]
+                buffer1 = self.buffer_stores[(dock+1, store)]
+                digraph.add_edge(buffer .get_grid_coords(corner=1), buffer1.get_grid_coords(corner=0))
+                digraph.add_edge(buffer1.get_grid_coords(corner=3), buffer .get_grid_coords(corner=2))
 
         return digraph
 

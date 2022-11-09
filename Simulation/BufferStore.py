@@ -1,6 +1,6 @@
 import cv2 as cv
 from XdockParams import round_coord, round_coords, \
-                      N_DOCK, W_DOCK, H_LANE, H_FLOOR, H_FRONT, H_LEFT, W_UP, W_DOWN, H_MANEUVER,\
+                      N_DOCK, W_DOCK, H_LANE, H_FLOOR, H_FRONT, H_RIGHT, H_LEFT, W_UP, W_DOWN, H_MANEUVER,\
                       N_BUFFER_STORE, W_BUFFER_STORE,  H_BUFFER_STORE, N_COMP_X, N_COMP_Y, W_COMPARTMENT, H_COMPARTMENT, \
                       BLACK
 
@@ -58,30 +58,19 @@ class BufferStore:
 
         self.dock   = dock
         self.buffer = buffer
-        self.h1     = H_FRONT + H_LANE + H_MANEUVER
-        self.h2     = self.h1 + H_BUFFER_STORE
-        if N_BUFFER_STORE==1:
-            self.w1  = dock*W_DOCK + (W_DOWN+W_DOCK-W_UP-W_BUFFER_STORE)/2
-            self.w2  = self.w1 + W_BUFFER_STORE
 
-            # surrounding path coords
-            self.w1_ext =  dock   *W_DOCK + W_DOWN/2
-            self.w2_ext = (dock+1)*W_DOCK - W_UP/2
+        self.w1 = dock * W_DOCK + (W_DOWN + W_DOCK - W_UP - W_BUFFER_STORE) / 2
+        self.w2 = self.w1 + W_BUFFER_STORE
 
-        else:
-            step     = (W_DOCK - W_DOWN-W_UP - W_BUFFER_STORE)/(N_BUFFER_STORE-1)
-            self.w1  = W_DOWN + dock*W_DOCK + buffer * step
-            self.w2  = self.w1 + W_BUFFER_STORE
+        self.h1 = H_FRONT + H_LANE + H_MANEUVER + H_RIGHT + buffer*(H_BUFFER_STORE+H_LEFT+H_RIGHT)
+        self.h2 = self.h1 + H_BUFFER_STORE
 
-            # surrounding path coords
-            if buffer==0:                 self.w1_ext = self.w1 - (self.w1-dock*W_DOCK)/2
-            else:                         self.w1_ext = self.w1 - (step-W_BUFFER_STORE)/2
+        # surrounding path coords
+        self.w1_ext = dock * W_DOCK + W_DOWN / 2
+        self.w2_ext = (dock + 1) * W_DOCK - W_UP / 2
 
-            if buffer==N_BUFFER_STORE-1:  self.w2_ext = self.w2 + ((dock+1)*W_DOCK-self.w2)/2
-            else:                         self.w2_ext = self.w2 + (step-W_BUFFER_STORE)/2
-
-        self.h1_ext = self.h1 - H_LEFT / 2
-        self.h2_ext = self.h2 + (H_FLOOR-self.h2) / 2
+        self.h1_ext = self.h1 - H_RIGHT / 2
+        self.h2_ext = self.h2 + H_LEFT  / 2
 
         self.w1, self.h1         = round_coords((self.w1, self.h1))
         self.w2, self.h2         = round_coords((self.w2, self.h2))
@@ -160,13 +149,17 @@ class BufferStore:
         pt2 = floor_plan.pnt_from_coords(self.w2, self.h2_ext)
         floor_plan.figure = cv.arrowedLine(floor_plan.figure, pt2, pt1, (0, 200, 0), 3)
 
+        # horizontal, right
+        pt1 = floor_plan.pnt_from_coords(self.w2, self.h1_ext)
+        pt2 = floor_plan.pnt_from_coords(self.w1, self.h1_ext)
+        floor_plan.figure = cv.arrowedLine(floor_plan.figure, pt2, pt1, (0, 200, 0), 3)
+
         # vertical, downwards
         pt1 = floor_plan.pnt_from_coords(self.w1_ext, self.h1)
         pt2 = floor_plan.pnt_from_coords(self.w1_ext, self.h2)
         floor_plan.figure = cv.arrowedLine(floor_plan.figure, pt2, pt1, (0, 200, 0), 3)
 
         # vertical, upwards
-        if self.buffer==N_BUFFER_STORE-1:
-            pt1 = floor_plan.pnt_from_coords(self.w2_ext, self.h1)
-            pt2 = floor_plan.pnt_from_coords(self.w2_ext, self.h2)
-            floor_plan.figure = cv.arrowedLine(floor_plan.figure, pt1, pt2, (0, 200, 0), 3)
+        pt1 = floor_plan.pnt_from_coords(self.w2_ext, self.h1)
+        pt2 = floor_plan.pnt_from_coords(self.w2_ext, self.h2)
+        floor_plan.figure = cv.arrowedLine(floor_plan.figure, pt1, pt2, (0, 200, 0), 3)

@@ -7,7 +7,7 @@ from Position import Position
 
 from XdockParams import TIME_STEP_S, N_DOCK, TIME_ROLL_CONTAINER_LOAD, N_BUFFER_STORE
 from SimulationConfig import set_dock_names_colors
-from Truck import get_truck_list, trucks_from_file
+from Truck import get_truck_list, trucks_from_file, get_next_incoming
 
 
 TIME_LOAD_TOTAL = 1.5*TIME_ROLL_CONTAINER_LOAD
@@ -33,21 +33,27 @@ def main():
         video_out  = cv.VideoWriter("test0.avi", cv.VideoWriter_fourcc(*"MJPG"), 20., frame_size)
 
     fp.header_text = "time="
-    fp.draw(draw_circulation=True, draw_grid=False)
+    fp.draw(draw_circulation=True, draw_grid=True)
 
     fp.imshow("Test")
     cv.setWindowTitle("Test", "X-dock")
     cv.moveWindow("Test", 10, 10)
     cv.waitKey(0)
 
-    truck_list = trucks_from_file()  #get_truck_list() #
-    samp_start = int( truck_list[ 0].arrival           /TIME_STEP_S)
-    samp_end   = int((truck_list[-1].departure + 1000.)/TIME_STEP_S)
+    truck_list  = trucks_from_file()  #get_truck_list() #
+    samp_start  = int( truck_list[ 0].arrival           /TIME_STEP_S)
+    samp_end    = int((truck_list[-1].departure + 1000.)/TIME_STEP_S)
+    fp.time_sec = samp_start*TIME_STEP_S
 
     truck_process_list = []
     for sample in range(samp_start, samp_end):
         time_sec       = sample*TIME_STEP_S
         fp.header_text = f"t={int(time_sec)//3600:2d}:{(int(time_sec)//60)%60:2d}:{int(time_sec)%60:02d}"
+
+        if fp.are_all_robots_idle():
+            time_next = get_next_incoming(truck_list, time_sec)
+            if time_next>time_sec+2*TIME_STEP_S:
+                continue
 
         if len(truck_list)>0 and time_sec>truck_list[0].arrival:
             truck = truck_list.pop(0)
@@ -92,9 +98,7 @@ def main():
                         pos_unload = Position(fp, dock, buffer_lane=lane)
                         robots[row].insert_process_store(fp, pos_pickup, pos_unload)
 
-
             truck_process_list = [proc for proc in truck_process_list if proc.nrc_not_assigned>0 or proc.out_going_truck]
-
 
         fp.time_step()
         fp.draw()##draw_grid=True)

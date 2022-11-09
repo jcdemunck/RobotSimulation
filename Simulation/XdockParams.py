@@ -7,24 +7,20 @@ BLACK = (0,0,0)
 H_COMPARTMENT  = 0.9
 W_COMPARTMENT  = 0.9
 N_COMP_X       = 4 ## 3
-N_COMP_Y       = 24 ##12
-N_BUFFER_STORE = 1 ##2
+N_COMP_Y       = 12 ##12
+N_BUFFER_STORE = 3  ##2
 W_BUFFER_STORE = N_COMP_X*W_COMPARTMENT
 H_BUFFER_STORE = N_COMP_Y*H_COMPARTMENT
 
 
-H_FRONT = 2.0
-H_REAR  = 2.0
-
 W_DOWN         = 0.8
-W_MID          = 0.##0.5
 W_UP           = 0.8
-W_DOCK         = W_DOWN + N_BUFFER_STORE*W_BUFFER_STORE + W_MID +W_UP
+W_DOCK         = W_DOWN + W_BUFFER_STORE + W_UP
 
 H_PARK         = 2.0
 W_PARK_PLACE   = 1.1
-H_RIGHT        = 2.0
-H_LEFT         = 2.0
+H_RIGHT        = 1.0
+H_LEFT         = 1.0
 H_MANEUVER     = H_RIGHT + H_PARK + H_LEFT
 
 N_LANE         =  4   # For each dock: two up and two down
@@ -33,10 +29,11 @@ H_LANE         = 18.
 MAX_LANE_STORE = 24
 H_LANE_STORE   = 0.75 # should be H_LANE/MAX_LANE_STORE and this should be larger than H_ROLL_CONTAINER
 
-N_DOCK     =  8 ##16
+N_DOCK     =  16 ##16
 
 W_FLOOR    = N_DOCK * W_DOCK
-H_FLOOR    = H_FRONT + H_LANE + H_MANEUVER + N_COMP_Y * H_COMPARTMENT + H_REAR
+H_FRONT    = 2.0
+H_FLOOR    = H_FRONT + H_LANE + H_MANEUVER + (H_RIGHT+H_BUFFER_STORE+H_LEFT)*N_BUFFER_STORE
 
 H_ROLL_CONTAINER = 0.7
 W_ROLL_CONTAINER = 0.7

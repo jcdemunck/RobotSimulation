@@ -14,7 +14,7 @@ class BufferLane:
         if dock<0 or N_DOCK<=dock: return
         if lane<0 or N_LANE<=lane: return
 
-        self.lane_up = lane<N_LANE/2
+        self.lane_up = lane>=N_LANE/2
         self.dock    = dock
         self.lane    = lane
 

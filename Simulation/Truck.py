@@ -11,6 +11,13 @@ from SimulationConfig import PRIO_LIST, DESTINATIONS, destination_color_dict, ge
 
 random.seed(13)
 
+def get_next_incoming(truck_list, t_start):
+    for truck in truck_list:
+        if truck.arrival>t_start:
+            return truck.arrival
+    return t_start-1
+
+
 def get_truck_list():
     def create_truck(nrc, destination, t_arrive, high_prio=None):
         if destination is None:  # unloading truck
@@ -27,8 +34,10 @@ def get_truck_list():
             return Truck(t_arrive, t_arrive + DOCK_TIME, destination_color_dict[destination], destination=destination, prios=prios)
 
     truck_list = sorted([create_truck(48, None, 0.),
-                         create_truck(48, None, 80.),
+                         create_truck(48, None, 0.),
                          create_truck(48, None, 60.),
+                         create_truck(48, None, 700.),
+                         create_truck(48, None, 700.),
                          create_truck(48, None, 150.),
                          create_truck(48, None, 150.),
                          create_truck(48, None, 510.),
