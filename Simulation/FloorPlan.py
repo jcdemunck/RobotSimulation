@@ -1,3 +1,5 @@
+import math
+
 import cv2 as cv
 import numpy as np
 
@@ -76,11 +78,11 @@ class FloorPlan:
                 for lane in range(N_LANE):
                     buffer_lane = self.buffer_lanes[(dock, lane)]
                     if buffer_lane.lane_up:
-                        if buffer_lane.can_be_loaded() and self.docks[dock].get_nrc_input()>0:
+                        if buffer_lane.can_be_loaded() and self.docks[dock].can_be_unloaded():
                             buffer_lane.reserve_store()
                             buffer_lane.store_roll_container(self.docks[dock].unload_next_roll_container())
                     else:
-                        if buffer_lane.can_be_unloaded() and self.docks[dock].get_nrc_output()>0:
+                        if buffer_lane.can_be_unloaded() and self.docks[dock].can_be_loaded():
                             self.docks[dock].load_next_roll_container(buffer_lane.pickup_roll_container())
 
             self.docks[dock].undock_truck(self.time_sec)
@@ -89,6 +91,20 @@ class FloorPlan:
 
         for rob in self.robots:
             rob.time_step(self)
+
+    def set_truck_list(self, truck_list):
+        for dock in range(N_DOCK):
+            self.docks[dock].set_truck_list(truck_list)
+
+    def get_next_arrival(self, t_start):
+        t_next = math.inf
+        for dock in range(N_DOCK):
+            for truck in self.docks[dock].truck_list:
+                if truck.arrival<=t_start: continue
+                t_next = min(t_next, truck.arrival)
+                break
+
+        return min(t_next, t_start)
 
     def are_all_robots_idle(self):
         for rob in self.robots:

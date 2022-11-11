@@ -37,7 +37,6 @@ H_FLOOR    = H_FRONT + H_LANE + H_MANEUVER + (H_RIGHT+H_BUFFER_STORE+H_LEFT)*N_B
 
 H_ROLL_CONTAINER = 0.7
 W_ROLL_CONTAINER = 0.7
-TIME_ROLL_CONTAINER_LOAD = 2.5 # >= H_ROLL_CONTAINER/BUFFER_LANE_SPEED
 
 W1_ROBOT = 0.3
 W2_ROBOT = 0.9
@@ -49,6 +48,12 @@ ROBOT_SPEED       =  1.0  # (1.2) m/s
 ROBOT_LOAD_TIME   = 5. # [s]
 ROBOT_UNLOAD_TIME = 5. # [s]
 BUFFER_LANE_SPEED =  0.3
+
+TIME_LOAD_BUFFER_LANE    = H_ROLL_CONTAINER / BUFFER_LANE_SPEED
+TIME_LOAD_RC_TRUCK       = 19   # time [s], per roll container to load a roll container onto a truck
+TIME_UNLOAD_RC_TRUCK     = 16   # time [s], per roll container to unload a roll container from a truck
+TIME_EXTRA_TRUCK_DOCKING = 100  # extra time [s] the driver needs to put at the dock (on top of loading/unloading)
+
 
 MAX_TRUCK_LOAD    = 48
 TRUCK_LOAD_TIME   = 10.# [s]

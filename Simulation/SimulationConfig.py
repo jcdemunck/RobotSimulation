@@ -1,5 +1,4 @@
-
-from XdockParams import N_COMP_Y, N_DOCK, N_BUFFER_STORE
+from XdockParams import N_DOCK, N_BUFFER_STORE
 from Position import Position
 
 

@@ -5,12 +5,12 @@ from pathlib import Path
 from FloorPlan import FloorPlan
 from Position import Position
 
-from XdockParams import TIME_STEP_S, N_DOCK, TIME_ROLL_CONTAINER_LOAD, N_BUFFER_STORE
+from XdockParams import TIME_STEP_S, N_DOCK, TIME_LOAD_BUFFER_LANE, N_BUFFER_STORE
 from SimulationConfig import set_dock_names_colors
-from Truck import get_truck_list, trucks_from_file, get_next_incoming
+from SimulateTrucks import get_truck_list, trucks_from_file
 
 
-TIME_LOAD_TOTAL = 1.5*TIME_ROLL_CONTAINER_LOAD
+TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
 
 N_VIDEO_FRAME  = -1
 video_out      = None
@@ -44,6 +44,7 @@ def main():
     samp_start  = int( truck_list[ 0].arrival           /TIME_STEP_S)
     samp_end    = int((truck_list[-1].departure + 1000.)/TIME_STEP_S)
     fp.time_sec = samp_start*TIME_STEP_S
+    fp.set_truck_list(truck_list)
 
     truck_process_list = []
     for sample in range(samp_start, samp_end):
@@ -51,7 +52,7 @@ def main():
         fp.header_text = f"t={int(time_sec)//3600:2d}:{(int(time_sec)//60)%60:2d}:{int(time_sec)%60:02d}"
 
         if fp.are_all_robots_idle():
-            time_next = get_next_incoming(truck_list, time_sec)
+            time_next = fp.get_next_arrival(time_sec)-1.
             if time_next>time_sec+2*TIME_STEP_S:
                 continue
 
@@ -63,7 +64,6 @@ def main():
                 fp.start_loading_truck(dock, truck)
             else:
                 fp.start_unloading_truck(dock, truck)
-
 
         for proc in truck_process_list:
             dock = proc.dock

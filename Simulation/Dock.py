@@ -19,9 +19,13 @@ class Dock:
         self.w1, self.h1 = round_coords((self.w1, self.h1))
         self.w2, self.h2 = round_coords((self.w2, self.h2))
 
-        self.truck_in  = None
-        self.truck_out = None
-        self.color     = (200,0,0)
+        self.truck_list = []
+        self.truck_in   = None
+        self.truck_out  = None
+        self.color      = (200,0,0)
+
+    def set_truck_list(self, truck_list):
+        self.truck_list = sorted([truck for truck in truck_list if truck.dock==self.dock], key=lambda t: t.arrival)
 
     def set_color(self, col):
         self.color = col
@@ -45,13 +49,11 @@ class Dock:
         self.truck_in  = None
         self.truck_out = truck
 
-    def get_nrc_input(self):
-        if self.truck_in is None: return 0
-        return len(self.truck_in.truck_load)
+    def can_be_unloaded(self):
+        return not self.truck_in is None and len(self.truck_in.truck_load)>0
 
-    def get_nrc_output(self):
-        if self.truck_out is None: return 0
-        return MAX_TRUCK_LOAD-len(self.truck_out.truck_load)
+    def can_be_loaded(self):
+        return not self.truck_out is None and MAX_TRUCK_LOAD-len(self.truck_out.truck_load)>0
 
     def unload_next_roll_container(self):
         return self.truck_in.truck_load.pop(0)
