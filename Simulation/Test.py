@@ -32,7 +32,6 @@ def main():
         frame_size = (fp.fig_width, fp.fig_height)
         video_out  = cv.VideoWriter("test0.avi", cv.VideoWriter_fourcc(*"MJPG"), 20., frame_size)
 
-    fp.header_text = "time="
     fp.draw(draw_circulation=True, draw_grid=True)
 
     fp.imshow("Test")
@@ -41,15 +40,14 @@ def main():
     cv.waitKey(0)
 
     truck_list  = get_truck_list() #trucks_from_file()  #
-    samp_start  = int( truck_list[ 0].arrival           /TIME_STEP_S)
-    samp_end    = int((truck_list[-1].departure + 1000.)/TIME_STEP_S)
+    samp_start  = int( truck_list[ 0].arrival         /TIME_STEP_S)
+    samp_end    = int((truck_list[-1].arrival + 2000.)/TIME_STEP_S)
     fp.time_sec = samp_start*TIME_STEP_S
     fp.set_truck_list(truck_list)
 
     truck_process_list = []
     for sample in range(samp_start, samp_end):
         time_sec       = sample*TIME_STEP_S
-        fp.header_text = f"t={int(time_sec)//3600:2d}:{(int(time_sec)//60)%60:2d}:{int(time_sec)%60:02d}"
 
         if fp.are_all_robots_idle():
             time_next = fp.get_next_arrival(time_sec)-1.
@@ -60,10 +58,6 @@ def main():
             truck = truck_list.pop(0)
             dock  = truck.dock
             truck_process_list.append(ProcessTruckLoad(dock, len(truck.truck_load)))
-            if truck.destination:
-                fp.start_loading_truck(dock, truck)
-            else:
-                fp.start_unloading_truck(dock, truck)
 
         for proc in truck_process_list:
             dock = proc.dock
@@ -87,9 +81,9 @@ def main():
                     proc.wait_time                  += TIME_LOAD_TOTAL
 
             else:
-                for store in range(N_BUFFER_STORE):
+                for store in range(N_BUFFER_STORE): # plan robots from buffer store to output lane
                     row  = fp.buffer_stores[(dock, store)].get_row_not_scheduled()
-                    lane = fp.get_available_output_lane(dock)
+                    lane = fp.get_best_available_lane(dock, output=True)
                     if 0<=row<len(robots) and lane>0:
                         fp.buffer_stores[(dock, store)].schedule_roll_container(row)
                         fp.buffer_lanes[(dock, lane)].reserve_store()

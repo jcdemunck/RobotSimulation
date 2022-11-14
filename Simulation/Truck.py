@@ -1,23 +1,32 @@
 import cv2 as cv
 import numpy as np
 
-from XdockParams import MAX_TRUCK_LOAD
+from XdockParams import MAX_TRUCK_LOAD, TIME_EXTRA_TRUCK_DOCKING, TIME_LOAD_RC_TRUCK, TIME_UNLOAD_RC_TRUCK, TIME_STEP_S
 
 class Truck:
-    def __init__(self, t_arrive, t_departure, color, destination=None, prios=None, roll_containers=None):
+    def __init__(self, t_arrive, color, destination=None, prios=None, roll_containers=None):
         self.color       = color
         self.arrival     = t_arrive
-        self.departure   = t_departure
 
         self.dock        = -1
 
         self.destination = destination
+        self.inbound     = destination is None
         self.prios       = prios
         self.truck_load  = [] if roll_containers is None else [rol for rol in roll_containers]
 
+        self.__docked            = False
+        self.__dead_time_docking = 0.
+        self.__dead_time_rc      = 0.
+
     def __str__(self):
+        if self.inbound:
+            departure = self.arrival + MAX_TRUCK_LOAD*TIME_UNLOAD_RC_TRUCK + TIME_EXTRA_TRUCK_DOCKING
+        else:
+            departure = self.arrival + MAX_TRUCK_LOAD*TIME_LOAD_RC_TRUCK   + TIME_EXTRA_TRUCK_DOCKING
         text  = f"arrival = {self.arrival:7.2f}\n"
-        text += f"departure = {self.departure:7.2f}\n"
+        text += f"departure = {departure:7.2f}\n"
+        text += f"inbound = {str(self.inbound):s}\n"
         text += f"dock = {self.dock:d}\n"
         if self.destination:
             text +=  f"destination = {self.destination:s}\n"
@@ -49,8 +58,53 @@ class Truck:
         for q in wheels:
             floor_plan.figure = cv.circle(floor_plan.figure, q, 5, self.color, -1)
 
+    def time_step(self):
+        if not self.__docked: return
+
+        self.__dead_time_docking += TIME_STEP_S
+        if self.__dead_time_docking>0:
+            self.__dead_time_rc += TIME_STEP_S
+
+    def start_docking(self):
+        self.__docked            = True
+        self.__dead_time_docking = -TIME_EXTRA_TRUCK_DOCKING/2
+        if self.inbound:
+            self.__dead_time_rc = -TIME_UNLOAD_RC_TRUCK
+        else:
+            self.__dead_time_rc = -TIME_LOAD_RC_TRUCK
+
+    def can_be_undocked(self):
+        if not self.__docked: return False
+
+        if self.inbound:
+            return self.__dead_time_docking > MAX_TRUCK_LOAD*TIME_UNLOAD_RC_TRUCK + TIME_EXTRA_TRUCK_DOCKING/2
+        else:
+            return self.__dead_time_docking > MAX_TRUCK_LOAD*TIME_LOAD_RC_TRUCK + TIME_EXTRA_TRUCK_DOCKING/2
+
+    def undock(self):
+        self.__docked = False
+
+    def can_be_unloaded(self):
+        if not self.inbound: return False
+        if self.__dead_time_docking<=0. or self.__dead_time_rc<=0.: return False
+        return len(self.truck_load)>0
+
+    def can_be_loaded(self):
+        if self.inbound: return False
+        if self.__dead_time_docking<=0. or self.__dead_time_rc<=0.: return False
+        return MAX_TRUCK_LOAD-len(self.truck_load)>0
+
+    def unload_next_roll_container(self):
+        self.__dead_time_rc -= TIME_UNLOAD_RC_TRUCK
+        return self.truck_load.pop(0)
+
+    def load_next_roll_container(self, rol):
+        self.__dead_time_rc -= TIME_LOAD_RC_TRUCK
+        if len(self.truck_load)<MAX_TRUCK_LOAD:
+            self.truck_load.append(rol)
 
 def main():
+    from SimulateTrucks import trucks_from_file
     truck_list = trucks_from_file()
     print(truck_list)
 

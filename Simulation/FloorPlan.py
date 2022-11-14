@@ -37,7 +37,6 @@ class FloorPlan:
             self.fig_width  = border_h + int((self.fig_height - border_h) * W_FLOOR/H_FLOOR)
 
         self.figure       = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)
-        self.header_text  = ""
 
         self.top_left     = (20, 50)
         self.bottom_right = (self.fig_width-(border_w-self.top_left[0]), self.fig_height-(border_h-self.top_left[1]))
@@ -71,26 +70,23 @@ class FloorPlan:
 
     def time_step(self):
         for dock in range(N_DOCK):
+            self.docks[dock].time_step(self)
+
             for lane in range(N_LANE):
-                self.buffer_lanes[(dock, lane)].time_step()
+                buffer_lane = self.buffer_lanes[(dock, lane)]
+                buffer_lane.time_step()
 
-            # Move trolleys from (unloading) truck to input buffer lane(s)
-                for lane in range(N_LANE):
-                    buffer_lane = self.buffer_lanes[(dock, lane)]
-                    if buffer_lane.lane_up:
-                        if buffer_lane.can_be_loaded() and self.docks[dock].can_be_unloaded():
-                            buffer_lane.reserve_store()
-                            buffer_lane.store_roll_container(self.docks[dock].unload_next_roll_container())
-                    else:
-                        if buffer_lane.can_be_unloaded() and self.docks[dock].can_be_loaded():
-                            self.docks[dock].load_next_roll_container(buffer_lane.pickup_roll_container())
-
-            self.docks[dock].undock_truck(self.time_sec)
-
-        self.time_sec += TIME_STEP_S
+                if buffer_lane.lane_up:
+                    if buffer_lane.can_be_loaded() and self.docks[dock].roll_container_available():
+                        buffer_lane.store_roll_container(self.docks[dock].get_roll_container())
+                else:
+                    if buffer_lane.can_be_unloaded() and self.docks[dock].can_roll_container_be_stored():
+                        self.docks[dock].put_roll_container(buffer_lane.pickup_roll_container())
 
         for rob in self.robots:
             rob.time_step(self)
+
+        self.time_sec += TIME_STEP_S
 
     def set_truck_list(self, truck_list):
         for dock in range(N_DOCK):
@@ -120,18 +116,12 @@ class FloorPlan:
 
         return sorted(roll_containers, key=lambda x: x[0])
 
-    def start_unloading_truck(self, dock, truck):
-        self.docks[dock].start_unloading(truck)
-
-    def start_loading_truck(self, dock, truck):
-        self.docks[dock].start_loading(truck)
-
-    def get_available_output_lane(self, dock):
+    def get_best_available_lane(self, dock, output=True):
         n_min    =  MAX_LANE_STORE+1
         lane_min = -1
         for lane in range(N_LANE):
             buffer_lane = self.buffer_lanes[(dock, lane)]
-            if buffer_lane.lane_up: continue
+            if (buffer_lane.lane_up and output) or (not buffer_lane.lane_up and not output): continue
             if buffer_lane.n_store_reserved>=MAX_LANE_STORE: continue
             if buffer_lane.n_store_reserved<n_min:
                 lane_min = lane
@@ -323,9 +313,9 @@ class FloorPlan:
         font = cv.FONT_HERSHEY_SIMPLEX
         self.figure = cv.putText(self.figure, text, pt, font, 0.6, BLACK)
 
-        if type(self.header_text)==str:
-            pt = self.pnt_from_coords((N_DOCK-1)*W_DOCK, 1.01 * h)
-            self.figure = cv.putText(self.figure, self.header_text, pt, font, 0.6, BLACK)
+        header_time = f"t={int(self.time_sec) // 3600:2d}:{(int(self.time_sec) // 60) % 60:2d}:{int(self.time_sec) % 60:02d}"
+        pt = self.pnt_from_coords((N_DOCK-1)*W_DOCK, 1.01 * h)
+        self.figure = cv.putText(self.figure, header_time, pt, font, 0.6, BLACK)
 
     def __draw_circulation(self, dock):
         if dock<0 or N_DOCK<=dock: return

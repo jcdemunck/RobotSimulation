@@ -5,8 +5,8 @@ from Position import Position
 PRIO_LIST               = ['A','B']
 MAX_PRIO                = len(PRIO_LIST)
 DESTINATIONS            = ["ALR","AP","KHM","UT"] + ["LW", "ZL", "HGL", "ELT"]
-destination_color_dict  = {"ALR": (0,255,200), "AP": (255,200,0), "KHM":(100,100,255), "UT":(100,0,50),
-                           "LW" : (255,0,0),   "ZL": (255,255,0), "HGL":(0,255,200),   "ELT":(0,0,255)}
+destination_color_dict  = {"ALR": (0,255,255), "AP": (255,  0,0), "KHM":(100,100,255), "UT":(100,0,50),
+                           "LW" : (255,0,150), "ZL": ( 50,255,0), "HGL":(250,255,  0), "ELT":(0,0,255)}
 
 def set_dock_names_colors(floor_plan):
     for dock in range(N_DOCK):
@@ -32,7 +32,7 @@ def get_output_dock(dest, prio):
 def choose_store(floor_plan, roll_container):
     dock = get_output_dock(roll_container.dest, roll_container.prio)
     prio = roll_container.prio
-    lane = floor_plan.get_available_output_lane(dock)
+    lane = floor_plan.get_best_available_lane(dock, output=True)
 
     if lane<0:
         store = -1

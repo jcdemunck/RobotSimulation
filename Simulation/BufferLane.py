@@ -3,7 +3,7 @@ from collections import namedtuple
 
 from XdockParams import round_coords, \
                       N_DOCK, W_DOCK, H_FRONT, \
-                      W_LANE, H_LANE, N_LANE, H_LANE_STORE, MAX_LANE_STORE, BUFFER_LANE_SPEED, TIME_LOAD_BUFFER_LANE, TRUCK_LOAD_TIME, \
+                      W_LANE, H_LANE, N_LANE, H_LANE_STORE, MAX_LANE_STORE, BUFFER_LANE_SPEED, TIME_LOAD_BUFFER_LANE, \
                       TIME_STEP_S, \
                       BLACK, WHITE
 
@@ -103,5 +103,5 @@ class BufferLane:
         if len(self.store)>0:
             self.n_store_reserved -= 1
             if not self.lane_up:
-                self.dead_time_down =-TRUCK_LOAD_TIME
+                self.dead_time_down =-TIME_LOAD_BUFFER_LANE
             return self.store.pop(0)
