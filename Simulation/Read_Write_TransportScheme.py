@@ -31,7 +31,7 @@ for col in df1.columns:
     else:
         print(col, "\t:", dest, shift)
 
-df  = pd.DataFrame(columns=["x_dock", "time", "IO", "nrc", "load", "destination", "shift"])
+df  = pd.DataFrame(columns=["trip","x_dock", "time", "IO", "nrc", "load", "destination", "shift"])
 for i,row in df1.iterrows():
     x_dock = row["Naar CD naam"]
     time   = get_decimal_time(row["Aankomst tijd"])
@@ -41,7 +41,7 @@ for i,row in df1.iterrows():
         if pd.isna(row[col]): continue
         load += [col_dict[col]]*int(row[col])
     load_s = ";".join(str(rol) for rol in load)
-    df.loc[len(df)] = [x_dock, time, "in_bound", len(load), load_s, "", -1]
+    df.loc[len(df)] = [row["Ritnaam"], x_dock, time, "in_bound", len(load), load_s, "", -1]
 
 for i,row in df2.iterrows():
     x_dock = row["Vertrek CD naam"]
@@ -49,7 +49,7 @@ for i,row in df2.iterrows():
     shift  = 1 if row["Type stroom"]=='V' else 2 if row["Type stroom"]=='L' else -1
     if shift<0: continue
 
-    df.loc[len(df)] = [x_dock, time, "out_bound", 0, [], row["Depot naam"], shift]
+    df.loc[len(df)] = [row["Ritnaam"], x_dock, time, "out_bound", 0, [], row["Depot naam"], shift]
 
 df = df.sort_values(["x_dock","IO","time"])
 

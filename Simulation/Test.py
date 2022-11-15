@@ -39,7 +39,7 @@ def main():
     cv.moveWindow("Test", 10, 10)
     cv.waitKey(0)
 
-    truck_list  = get_truck_list() #trucks_from_file()  #
+    truck_list  = trucks_from_file()  #get_truck_list() #
     samp_start  = int( truck_list[ 0].arrival         /TIME_STEP_S)
     samp_end    = int((truck_list[-1].arrival + 2000.)/TIME_STEP_S)
     fp.time_sec = samp_start*TIME_STEP_S

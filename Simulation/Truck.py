@@ -1,12 +1,14 @@
 import cv2 as cv
 import numpy as np
 
-from XdockParams import MAX_TRUCK_LOAD, TIME_EXTRA_TRUCK_DOCKING, TIME_LOAD_RC_TRUCK, TIME_UNLOAD_RC_TRUCK, TIME_STEP_S
+from XdockParams import MAX_TRUCK_LOAD, TIME_DOCK_INBOUND, TIME_DOCK_OUTBOUND, TIME_LOAD_RC_TRUCK, TIME_UNLOAD_RC_TRUCK, TIME_STEP_S
 
 class Truck:
-    def __init__(self, t_arrive, color, destination=None, prios=None, roll_containers=None):
+    lastID = 0
+    def __init__(self, t_arrive, t_departure, color, destination=None, prios=None, roll_containers=None, ID = None):
         self.color       = color
         self.arrival     = t_arrive
+        self.departure   = t_departure
 
         self.dock        = -1
 
@@ -15,17 +17,20 @@ class Truck:
         self.prios       = prios
         self.truck_load  = [] if roll_containers is None else [rol for rol in roll_containers]
 
-        self.__docked            = False
-        self.__dead_time_docking = 0.
-        self.__dead_time_rc      = 0.
+        if ID is None:
+            self.ID         = str(Truck.lastID)
+            Truck.lastID   += 1
+        else:
+            self.ID         = str(ID)
+
+        self.__docked       = False
+        self.__dock_time    = -1.
+        self.__dead_time_rc = 0.
 
     def __str__(self):
-        if self.inbound:
-            departure = self.arrival + MAX_TRUCK_LOAD*TIME_UNLOAD_RC_TRUCK + TIME_EXTRA_TRUCK_DOCKING
-        else:
-            departure = self.arrival + MAX_TRUCK_LOAD*TIME_LOAD_RC_TRUCK   + TIME_EXTRA_TRUCK_DOCKING
-        text  = f"arrival = {self.arrival:7.2f}\n"
-        text += f"departure = {departure:7.2f}\n"
+        text  = f"ID = {str(self.ID):s}\n"
+        text += f"arrival = {self.arrival:7.2f}\n"
+        text += f"departure = {self.departure:7.2f}\n"
         text += f"inbound = {str(self.inbound):s}\n"
         text += f"dock = {self.dock:d}\n"
         if self.destination:
@@ -61,13 +66,13 @@ class Truck:
     def time_step(self):
         if not self.__docked: return
 
-        self.__dead_time_docking += TIME_STEP_S
-        if self.__dead_time_docking>0:
+        self.__dock_time += TIME_STEP_S
+        if self.__dock_time>=TIME_DOCK_INBOUND:
             self.__dead_time_rc += TIME_STEP_S
 
     def start_docking(self):
-        self.__docked            = True
-        self.__dead_time_docking = -TIME_EXTRA_TRUCK_DOCKING/2
+        self.__docked    = True
+        self.__dock_time = 0.
         if self.inbound:
             self.__dead_time_rc = -TIME_UNLOAD_RC_TRUCK
         else:
@@ -75,23 +80,19 @@ class Truck:
 
     def can_be_undocked(self):
         if not self.__docked: return False
-
-        if self.inbound:
-            return self.__dead_time_docking > MAX_TRUCK_LOAD*TIME_UNLOAD_RC_TRUCK + TIME_EXTRA_TRUCK_DOCKING/2
-        else:
-            return self.__dead_time_docking > MAX_TRUCK_LOAD*TIME_LOAD_RC_TRUCK + TIME_EXTRA_TRUCK_DOCKING/2
+        return self.__dock_time>=self.departure-self.arrival
 
     def undock(self):
         self.__docked = False
 
     def can_be_unloaded(self):
-        if not self.inbound: return False
-        if self.__dead_time_docking<=0. or self.__dead_time_rc<=0.: return False
+        if not self.__docked or not self.inbound: return False
+        if self.__dock_time<TIME_DOCK_INBOUND or self.__dead_time_rc<=0.: return False
         return len(self.truck_load)>0
 
     def can_be_loaded(self):
-        if self.inbound: return False
-        if self.__dead_time_docking<=0. or self.__dead_time_rc<=0.: return False
+        if not self.__docked or self.inbound: return False
+        if self.__dock_time<TIME_DOCK_INBOUND or self.__dead_time_rc<=0.: return False
         return MAX_TRUCK_LOAD-len(self.truck_load)>0
 
     def unload_next_roll_container(self):
@@ -102,11 +103,3 @@ class Truck:
         self.__dead_time_rc -= TIME_LOAD_RC_TRUCK
         if len(self.truck_load)<MAX_TRUCK_LOAD:
             self.truck_load.append(rol)
-
-def main():
-    from SimulateTrucks import trucks_from_file
-    truck_list = trucks_from_file()
-    print(truck_list)
-
-if __name__=="__main__":
-    main()

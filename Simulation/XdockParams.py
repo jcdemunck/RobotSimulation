@@ -52,7 +52,8 @@ BUFFER_LANE_SPEED =  0.3
 TIME_LOAD_BUFFER_LANE    = H_ROLL_CONTAINER / BUFFER_LANE_SPEED
 TIME_LOAD_RC_TRUCK       = 19   # time [s], per roll container to load a roll container onto a truck
 TIME_UNLOAD_RC_TRUCK     = 16   # time [s], per roll container to unload a roll container from a truck
-TIME_EXTRA_TRUCK_DOCKING = 100  # extra time [s] the driver needs to put at the dock (on top of loading/unloading)
+TIME_DOCK_INBOUND        = 100  # time [s] the driver needs to put his truck at the dock (before loading/unloading)
+TIME_DOCK_OUTBOUND       =  50  # time [s] the driver needs drive away from the dock (after loading/unloading)
 
 
 MAX_TRUCK_LOAD    = 48

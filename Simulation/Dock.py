@@ -88,7 +88,7 @@ class Dock:
             return
 
         if self.truck.inbound and self.roll_container is None and self.truck.can_be_unloaded():
-            self.put_roll_container(self.truck.unload_next_roll_container())
+            self.put_roll_container(self.truck.unload_next_roll_container(), inbound=True)
 
         elif not self.truck.inbound and not self.roll_container is None and self.rc_dead_time<=0.:
             self.truck.load_next_roll_container(self.roll_container)
@@ -109,8 +109,8 @@ class Dock:
         self.rc_dead_time   = TIME_LOAD_BUFFER_LANE
         return roll
 
-    def put_roll_container(self, rol):
+    def put_roll_container(self, rol, inbound=False):
         self.roll_container   = rol
         self.rc_dead_time     = TIME_LOAD_BUFFER_LANE
-        self.roll_container.w = (self.w1 + self.w2)/2
+        self.roll_container.w = 0.2*self.w1 + 0.8*self.w2 if inbound else 0.8*self.w1 + 0.2*self.w2
         self.roll_container.h = -self.h1/2
