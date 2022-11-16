@@ -7,7 +7,7 @@ from XdockParams import TIME_STEP_S, W_FLOOR, H_FLOOR, \
 from BufferStoreManager import BufferStoreManager
 
 
-BMR = BufferStoreManager()
+BSM = BufferStoreManager()
 
 def print_tasks(task_list):
     for t,task in enumerate(task_list):
@@ -142,12 +142,12 @@ class RobotTask:
 
 class Robot:
     lastID = 0
-    def __init__(self, w, h, parking_pos):
+    def __init__(self, w, h, parking_pos, color=None):
         self.w           = w
         self.h           = h
         self.o           = 3
         self.rot         = [[1, 0], [0, 1]]
-        self.col         = (200, 0, 0)
+        self.col         = (200, 0, 0) if color is None else color
         self.rol         = None
         self.default_pos = parking_pos
         self.ID          = Robot.lastID
@@ -260,7 +260,7 @@ class Robot:
             self.task_list = task_list
 
     def __insert_process_incoming(self, floor_plan):
-        pos_store = BMR.choose_store(floor_plan, self.rol)
+        pos_store = BSM.choose_store(floor_plan, self.rol)
         task_list = [RobotTask(floor_plan=floor_plan, goto_pos=pos_store),
                      RobotTask(wait=ROBOT_UNLOAD_TIME, unload=pos_store.get_store_object(floor_plan))]
 

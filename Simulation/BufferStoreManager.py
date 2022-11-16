@@ -53,7 +53,7 @@ class BufferStoreManager:
         if lane<0:
             buffer_store = self.find_available_buffer_store(floor_plan, dest, prio)
             if buffer_store is None:
-                print("ERROR: SimulationConfig.choose_store(). buffer overflow. prio = ", prio, "dest = ", dest)
+                print("ERROR: BufferStoreManager.choose_store(). buffer overflow. prio = ", prio, "dest = ", dest)
 
             store        = buffer_store.buffer
             dock         = buffer_store.dock

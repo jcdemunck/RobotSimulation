@@ -4,6 +4,9 @@ from XdockParams import round_coord, round_coords, \
                       N_BUFFER_STORE, W_BUFFER_STORE,  H_BUFFER_STORE, N_COMP_X, N_COMP_Y, W_COMPARTMENT, H_COMPARTMENT, \
                       BLACK
 
+from SimulationConfig import destination_color_dict, PRIO_LIST
+from Robot import BSM
+
 class BufferStoreRow:
     def __init__(self, w_dict, h):
         self.n_store_reserved = 0 # number of places reserved for storage
@@ -147,6 +150,13 @@ class BufferStore:
         for row in range(N_COMP_Y):
             for rol in self.store[row].store:
                 rol.draw(floor_plan)
+
+        dest, prio = BSM.loc_dp_dict[self.dock, self.buffer]
+        col = destination_color_dict[dest]
+        lt  = 1 if prio==PRIO_LIST[0] else 2
+        pt1 = floor_plan.pnt_from_coords(self.w1, self.h1)
+        pt2 = floor_plan.pnt_from_coords(self.w2, self.h2)
+        floor_plan.figure = cv.rectangle(floor_plan.figure, pt1, pt2, col, lt)
 
     def draw_circulation(self, floor_plan):
         # horizontal, to left

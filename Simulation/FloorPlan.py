@@ -25,7 +25,6 @@ parentdir = currentdir[0:os.path.dirname(currentdir).rfind("\\")]
 sys.path.insert(0, parentdir+"\\dks-ketenrekenmodel\\src\\krm\\core")
 import GraphTools as GT
 
-
 class FloorPlan:
     def __init__(self, n_robots=8):
         border_w          = 70
@@ -63,10 +62,13 @@ class FloorPlan:
             parking_pos = Position(self, dock=r%N_DOCK, parking=r//N_DOCK)
             if parking_pos is None:
                 break
-
-            self.robots.append(Robot(parking_pos.w, parking_pos.h, parking_pos))
+            color = None if (r//N_DOCK)%2 else (0, 0, 255)
+            self.robots.append(Robot(parking_pos.w, parking_pos.h, parking_pos, color))
 
         self.time_sec = 0.
+
+    def get_robots(self, dock):
+        return [rob for rob in self.robots if rob.default_pos.dock==dock]
 
     def time_step(self):
         for dock in range(N_DOCK):

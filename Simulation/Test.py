@@ -9,7 +9,7 @@ from XdockParams import TIME_STEP_S, N_DOCK, TIME_LOAD_BUFFER_LANE
 from SimulationConfig import set_dock_names_colors, get_output_dock
 from TruckPlan import TruckPlan
 from Truck import Truck
-from Robot import BMR
+from Robot import BSM
 
 
 TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
@@ -83,21 +83,23 @@ def main():
                     proc.wait_time                  += TIME_LOAD_TOTAL
 
             else:
-                buffer_list = BMR.get_buffer_list(proc.destination, proc.prios[0])
+                buffer_list = BSM.get_buffer_list(proc.destination, proc.prios[0])
                 for (dock,store) in buffer_list: # plan robots from buffer store to output lane
                     if fp.buffer_stores[dock, store].is_store_unused(): continue
 
-                    row  = fp.buffer_stores[dock, store].get_row_not_scheduled()
-                    lane = fp.get_best_available_lane(dock, output=True)
-                    if 0<=row<len(robots) and lane>0:
+                    dock_dest = get_output_dock(proc.destination, proc.prios[0])
+                    row       = fp.buffer_stores[dock, store].get_row_not_scheduled()
+                    lane      = fp.get_best_available_lane(dock_dest, output=True)
+                    if row<0 or lane<0: continue
 
-                        dock_dest = get_output_dock(proc.destination, proc.prios[0])
-                        fp.buffer_stores[dock, store].schedule_roll_container(row)
-                        fp.buffer_lanes[dock_dest, lane].reserve_store()
+                    fp.buffer_stores[dock, store].schedule_roll_container(row)
+                    fp.buffer_lanes[dock_dest, lane].reserve_store()
 
-                        pos_pickup = Position(fp, dock_dest, buffer_store=store, row=row, col=0)
-                        pos_unload = Position(fp, dock, buffer_lane=lane)
-                        robots[row].insert_process_store(fp, pos_pickup, pos_unload)
+                    pos_pickup = Position(fp, dock, buffer_store=store, row=row, col=0)
+                    pos_unload = Position(fp, dock_dest, buffer_lane=lane)
+
+                    for rob in fp.get_robots(dock_dest):
+                        rob.insert_process_store(fp, pos_pickup, pos_unload)
 
             truck_process_list = [proc for proc in truck_process_list if proc.nrc_not_assigned>0 or not proc.inbound]
 
