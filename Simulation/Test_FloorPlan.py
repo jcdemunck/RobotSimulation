@@ -3,7 +3,8 @@ import cv2 as cv
 from FloorPlan import FloorPlan
 
 
-from XdockParams import N_DOCK, TIME_LOAD_BUFFER_LANE, N_BUFFER_STORE
+from XdockParams import N_DOCK
+from Position import Position
 from SimulationConfig import set_dock_names_colors
 
 def main():
@@ -11,6 +12,11 @@ def main():
     set_dock_names_colors(fp)
 
     fp.draw(draw_grid=True)##draw_circulation=True, draw_grid=True)
+
+    pos1 = Position(fp, 12, buffer_lane=1)
+    pos2 = Position(fp, 3, buffer_lane=3)
+    path = fp.get_shortest_path(pos1, pos2)
+    fp.draw_path(path, (0,0,255))
 
     fp.imshow("Test")
     cv.setWindowTitle("Test", "X-dock")

@@ -48,13 +48,13 @@ class Dock:
 
         else:
             if self.truck.inbound:
-                w                 = self.w1
+                w                 = self.w2
                 pt1               = floor_plan.pnt_from_coords(w, 0.9 * self.h1 + 0.1 * self.h2)
                 pt2               = floor_plan.pnt_from_coords(w, 0.1 * self.h1 + 0.9 * self.h2)
                 floor_plan.figure = cv.arrowedLine(floor_plan.figure, pt1, pt2, (200, 200, 200), 2, tipLength=0.3)
                 self.truck.draw(floor_plan, self)
             else:
-                w                 = self.w2
+                w                 = self.w1
                 pt1               = floor_plan.pnt_from_coords(w, 0.1 * self.h1 + 0.9 * self.h2)
                 pt2               = floor_plan.pnt_from_coords(w, 0.9 * self.h1 + 0.1 * self.h2)
                 floor_plan.figure = cv.arrowedLine(floor_plan.figure, pt1, pt2, (200, 200, 200), 2, tipLength=0.3)

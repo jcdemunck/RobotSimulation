@@ -8,7 +8,7 @@ H_COMPARTMENT  = 0.9
 W_COMPARTMENT  = 0.9
 N_COMP_X       = 4 ## 3
 N_COMP_Y       = 12 ##12
-N_BUFFER_STORE = 3  ##2
+N_BUFFER_STORE = 2##3  ##2
 W_BUFFER_STORE = N_COMP_X*W_COMPARTMENT
 H_BUFFER_STORE = N_COMP_Y*H_COMPARTMENT
 
@@ -49,16 +49,18 @@ ROBOT_LOAD_TIME   =  5.   # [s]
 ROBOT_UNLOAD_TIME =  5.   # [s]
 BUFFER_LANE_SPEED =  0.3
 
+
+MAX_TRUCK_LOAD           = 48
 TIME_LOAD_BUFFER_LANE    = H_ROLL_CONTAINER / BUFFER_LANE_SPEED
 TIME_LOAD_RC_TRUCK       = 19   # time [s], per roll container to load a roll container onto a truck
-TIME_UNLOAD_RC_TRUCK     = 16   # time [s], per roll container to unload a roll container from a truck
-TIME_DOCK_INBOUND        = 100  # time [s] the driver needs to put his truck at the dock (before loading/unloading)
-TIME_DOCK_OUTBOUND       =  50  # time [s] the driver needs drive away from the dock (after loading/unloading)
+TIME_UNLOAD_RC_TRUCK     = 15   # time [s], per roll container to unload a roll container from a truck
+TIME_DOCK_INBOUND        = 120  # time [s] the driver needs to put his truck at the dock (before loading/unloading)
+TIME_DOCK_OUTBOUND       =  60  # time [s] the driver needs drive away from the dock (after loading/unloading)
+TIME_DOCK_EXTRA          =  60  # extra time [s] the driver has for (un)loading to wait before the buffer lane is clear/filled
 
+MAX_DOCK_TIME_LOADING    = TIME_DOCK_INBOUND + MAX_TRUCK_LOAD * TIME_LOAD_RC_TRUCK   + TIME_DOCK_EXTRA + TIME_DOCK_OUTBOUND
+MAX_DOCK_TIME_UNLOADING  = TIME_DOCK_INBOUND + MAX_TRUCK_LOAD * TIME_UNLOAD_RC_TRUCK + TIME_DOCK_EXTRA + TIME_DOCK_OUTBOUND
 
-MAX_TRUCK_LOAD    = 48
-###TRUCK_LOAD_TIME   = 10.# [s]
-DOCK_TIME         = 410.#500. # [s]
 
 _COORD_SCALE = 1000.
 def round_coord(co):

@@ -6,19 +6,19 @@ from XdockParams import round_coord, round_coords, \
 
 class BufferStoreRow:
     def __init__(self, w_dict, h):
-        self.n_reserved  = 0 # number of places reserved for storage
-        self.store       = []
-        self.w_dict      = w_dict
-        self.h           = h
+        self.n_store_reserved = 0 # number of places reserved for storage
+        self.store            = []
+        self.w_dict           = w_dict
+        self.h                = h
 
     def get_n_stored(self):
         return len(self.store)
 
     def reserve_store(self):
-        self.n_reserved += 1
+        self.n_store_reserved += 1
 
     def is_store_available(self):
-        return self.n_reserved<N_COMP_X
+        return self.n_store_reserved<N_COMP_X
 
     def store_roll_container(self, rol):
         if len(self.store)>=N_COMP_X:
@@ -48,7 +48,7 @@ class BufferStoreRow:
         if len(self.store)<=0:
             return
 
-        self.n_reserved -= 1
+        self.n_store_reserved -= 1
         return self.store.pop(-1)
 
 class BufferStore:
@@ -62,7 +62,7 @@ class BufferStore:
         self.w1 = dock * W_DOCK + (W_DOWN + W_DOCK - W_UP - W_BUFFER_STORE) / 2
         self.w2 = self.w1 + W_BUFFER_STORE
 
-        self.h1 = H_FRONT + H_LANE + H_MANEUVER + H_RIGHT + buffer*(H_BUFFER_STORE+H_LEFT+H_RIGHT)
+        self.h1 = H_FRONT + H_LANE + H_MANEUVER + H_RIGHT + buffer * (H_BUFFER_STORE + H_LEFT + H_RIGHT)
         self.h2 = self.h1 + H_BUFFER_STORE
 
         # surrounding path coords
@@ -83,7 +83,7 @@ class BufferStore:
 
     def is_store_unused(self):
         for row_store in self.store:
-            if row_store.n_reserved>0: return False
+            if row_store.n_store_reserved>0: return False
         return True
 
     def schedule_roll_container(self, row):

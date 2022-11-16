@@ -28,27 +28,3 @@ def get_output_dock(dest, prio):
     d = DESTINATIONS.index(dest)
     p = PRIO_LIST.index(prio)
     return d*MAX_PRIO+p
-
-def choose_store(floor_plan, roll_container):
-    dock = get_output_dock(roll_container.dest, roll_container.prio)
-    prio = roll_container.prio
-    lane = floor_plan.get_best_available_lane(dock, output=True)
-
-    if lane<0:
-        store = -1
-        row   = -1
-        for store in range(N_BUFFER_STORE):
-            buffer_store = floor_plan.buffer_stores[(dock, store)]
-            row = buffer_store.get_first_available_store()
-            if row>=0: break
-
-        if row<0:
-            print("ERROR: SimulationConfig.choose_store(). buffer overflow. prio = ", prio, "dock = ", dock)
-        pos_store    = Position(floor_plan, dock, buffer_store=store, row=row, col=0)
-        buffer_store = floor_plan.buffer_stores[(dock, store)]
-        buffer_store.reserve_store(row)
-    else:
-        pos_store = Position(floor_plan, dock, buffer_lane=lane)
-        floor_plan.buffer_lanes[(dock, lane)].reserve_store()
-
-    return pos_store

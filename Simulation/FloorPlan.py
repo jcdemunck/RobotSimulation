@@ -50,11 +50,11 @@ class FloorPlan:
             self.parkings[dock] = Parking(dock)
             pos_list           += self.parkings[dock].get_park_positions()
             for lane in range(N_LANE):
-                self.buffer_lanes[(dock, lane)]  = BufferLane(dock, lane)
-                pos_list                        += [self.buffer_lanes[(dock, lane)].get_grid_coords()]
+                self.buffer_lanes[dock, lane]  = BufferLane(dock, lane)
+                pos_list                        += [self.buffer_lanes[dock, lane].get_grid_coords()]
             for store in range(N_BUFFER_STORE):
-                self.buffer_stores[(dock,store)] = BufferStore(dock, store)
-                pos_list                        += self.buffer_stores[(dock, store)].get_store_positions()
+                self.buffer_stores[dock, store] = BufferStore(dock, store)
+                pos_list                        += self.buffer_stores[dock, store].get_store_positions()
         self.grid_graph = self.__create_grid()
         self.path_table = GT.PathTable(self.grid_graph, pos_list, get_distance_city_block)
 
@@ -73,7 +73,7 @@ class FloorPlan:
             self.docks[dock].time_step(self)
 
             for lane in range(N_LANE):
-                buffer_lane = self.buffer_lanes[(dock, lane)]
+                buffer_lane = self.buffer_lanes[dock, lane]
                 buffer_lane.time_step()
 
                 if buffer_lane.lane_up:
@@ -110,9 +110,9 @@ class FloorPlan:
     def get_incoming_roll_containers(self, dock):
         roll_containers = []
         for lane in range(N_LANE):
-            buffer_lane = self.buffer_lanes[(dock, lane)]
-            if not buffer_lane.lane_up: continue
-            roll_containers += buffer_lane.get_expected_roll_containers()
+            buffer_lane = self.buffer_lanes[dock, lane]
+            if buffer_lane.lane_up:
+                roll_containers += buffer_lane.get_expected_roll_containers()
 
         return sorted(roll_containers, key=lambda x: x[0])
 
@@ -120,7 +120,7 @@ class FloorPlan:
         n_min    =  MAX_LANE_STORE+1
         lane_min = -1
         for lane in range(N_LANE):
-            buffer_lane = self.buffer_lanes[(dock, lane)]
+            buffer_lane = self.buffer_lanes[dock, lane]
             if (buffer_lane.lane_up and output) or (not buffer_lane.lane_up and not output): continue
             if buffer_lane.n_store_reserved>=MAX_LANE_STORE: continue
             if buffer_lane.n_store_reserved<n_min:
@@ -142,12 +142,12 @@ class FloorPlan:
             if draw_circulation:
                 self.__draw_circulation(dock)
             for store in range(N_BUFFER_STORE):
-                self.buffer_stores[(dock, store)].draw(self)
+                self.buffer_stores[dock, store].draw(self)
 
             self.docks[dock].draw(self)
             self.parkings[dock].draw(self)
             for lane in range(N_LANE):
-                self.buffer_lanes[(dock, lane)].draw(self)
+                self.buffer_lanes[dock, lane].draw(self)
 
         for rob in self.robots:
             rob.draw(self)
@@ -171,7 +171,7 @@ class FloorPlan:
             # edges around parking
             path_right = [p_park_0, p_park_1] +\
                          [coord for coord in park.coord_dict.values()] +\
-                         [self.buffer_lanes[(dock, lane)].get_grid_coords() for lane in range(N_LANE)]
+                         [self.buffer_lanes[dock, lane].get_grid_coords() for lane in range(N_LANE)]
             path_right.sort(key = lambda wh: wh[0])  # origins of points below and above path below parking to the right
 
             p_old = path_right[0]  # left most point
@@ -209,7 +209,7 @@ class FloorPlan:
 
             # edges around each buffer store
             for store in range(N_BUFFER_STORE):
-                buffer = self.buffer_stores[(dock,store)]
+                buffer = self.buffer_stores[dock, store]
                 w2, h2 = buffer.get_grid_coords(corner=2) # upper right
                 q      = (w2, buffer.get_grid_coords(row=0, col=N_COMP_X-1)[1])
 
@@ -274,7 +274,7 @@ class FloorPlan:
     def get_item_coords(self, dock, buffer_lane=-1, parking=-1, store=-1, row=-1, col=-1):
         if buffer_lane>=0:
             if buffer_lane>N_LANE: return
-            return self.buffer_lanes[(dock, buffer_lane)].get_grid_coords()
+            return self.buffer_lanes[dock, buffer_lane].get_grid_coords()
 
         if parking>=0:
             if parking>=self.parkings[dock].n_parc_spot: return
@@ -282,7 +282,7 @@ class FloorPlan:
 
         if store>=0:
             if store>=N_BUFFER_STORE: return
-            return self.buffer_stores[(dock, store)].get_grid_coords(row=row, col=col)
+            return self.buffer_stores[dock, store].get_grid_coords(row=row, col=col)
 
     def get_shortest_path(self, pos1, pos2):
         coords1 = pos1.get_coords()
@@ -326,7 +326,7 @@ class FloorPlan:
         # around stores
         for buffer in range(N_BUFFER_STORE):
             for store in range(N_BUFFER_STORE):
-                self.buffer_stores[(dock, store)].draw_circulation(self)
+                self.buffer_stores[dock, store].draw_circulation(self)
 
     def imshow(self, name):
         cv.imshow(name, self.figure)

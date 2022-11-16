@@ -4,8 +4,10 @@ import cv2 as cv
 from XdockParams import TIME_STEP_S, W_FLOOR, H_FLOOR, \
                         ROBOT_SPEED, ROBOT_LOAD_TIME, ROBOT_UNLOAD_TIME, W1_ROBOT, W2_ROBOT, H1_ROBOT, H2_ROBOT, \
                         get_orientation, get_distance_city_block, get_path_len
-from SimulationConfig import choose_store
+from BufferStoreManager import BufferStoreManager
 
+
+BMR = BufferStoreManager()
 
 def print_tasks(task_list):
     for t,task in enumerate(task_list):
@@ -76,7 +78,7 @@ class RobotTask:
                 self.path = floor_plan.grid_graph.get_shortest_path((robot.w,robot.h), self.goto)
 
                 if len(self.path)==0:
-                    print("EROR: Robot.time_step(). Path not found.")
+                    print("ERROR: Robot.time_step(). Path not found.")
                     print(robot.ID, (robot.w,robot.h), (robot.w,robot.h) in floor_plan.grid_graph.v_neighbors)
                     print(self)
 
@@ -258,7 +260,7 @@ class Robot:
             self.task_list = task_list
 
     def __insert_process_incoming(self, floor_plan):
-        pos_store = choose_store(floor_plan, self.rol)
+        pos_store = BMR.choose_store(floor_plan, self.rol)
         task_list = [RobotTask(floor_plan=floor_plan, goto_pos=pos_store),
                      RobotTask(wait=ROBOT_UNLOAD_TIME, unload=pos_store.get_store_object(floor_plan))]
 

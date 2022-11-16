@@ -39,7 +39,7 @@ class RollContainer:
 
         text = f"{self.prio:s}"
         font = cv.FONT_HERSHEY_SIMPLEX
-        floor_plan.figure = cv.putText(floor_plan.figure, text, pt1, font, 0.7, BLACK)
+        floor_plan.figure = cv.putText(floor_plan.figure, text, pt1, font, 0.5, BLACK)
 
     def rotate(self, left):
         step   = 1 if left else 3

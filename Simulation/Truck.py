@@ -1,7 +1,8 @@
 import cv2 as cv
 import numpy as np
 
-from XdockParams import MAX_TRUCK_LOAD, TIME_DOCK_INBOUND, TIME_DOCK_OUTBOUND, TIME_LOAD_RC_TRUCK, TIME_UNLOAD_RC_TRUCK, TIME_STEP_S
+from XdockParams import MAX_TRUCK_LOAD, TIME_DOCK_INBOUND, TIME_DOCK_OUTBOUND, TIME_LOAD_RC_TRUCK, TIME_UNLOAD_RC_TRUCK, TIME_STEP_S,\
+                        W_DOCK, BLACK
 
 class Truck:
     lastID = 0
@@ -46,18 +47,25 @@ class Truck:
         y = 1.1*dock.h1 - 0.1*dock.h2
 
         truck = [(-1.5, 0.0), (2.5, 0.0), (2.5, 0.85), (1.5, 0.85), (1.5, 1.7), (-1.5, 1.7)]
+        if self.inbound:
+            truck = [(-w+1,h) for (w,h) in truck]
         truck = [(x + qx * s, y + (qy + 0.5) * s) for (qx, qy) in truck]
         truck = [list(floor_plan.pnt_from_coords(*q)) for q in truck]
         floor_plan.figure = cv.polylines(floor_plan.figure, [np.array(truck)], True, self.color, 1)
 
         if len(self.truck_load)>0:
             w    = 3*len(self.truck_load)/MAX_TRUCK_LOAD
-            load = [(1.5-w,0.0), (1.5,1.7)]
+            load = [(w-0.5,0.0), (-0.5,1.7)] if self.inbound else [(1.5-w,0.0), (1.5,1.7)]
             load = [(x + qx * s, y + (qy + 0.5) * s) for (qx, qy) in load]
             load = [list(floor_plan.pnt_from_coords(*q)) for q in load]
             cv.rectangle(floor_plan.figure, load[0], load[1], self.color, -1)
 
-        wheels = [(-1.0, 0.0), (2.0, 0.0)]
+            pnt  = floor_plan.pnt_from_coords(x, 1.4*dock.h1 - 0.4*dock.h2)
+            font = cv.FONT_HERSHEY_SIMPLEX
+            nrc  = len(self.truck_load)
+            floor_plan.figure = cv.putText(floor_plan.figure, str(nrc), pnt, font, 0.5, BLACK)
+
+        wheels = [(2.0, 0.0), (-1.0, 0.0)] if self.inbound else [(-1.0, 0.0), (2.0, 0.0)]
         wheels = [(x + qx*s, y + (qy + 0.5) * s) for (qx, qy) in wheels]
         wheels = [floor_plan.pnt_from_coords(*q) for q in wheels]
         for q in wheels:
@@ -87,12 +95,16 @@ class Truck:
 
     def can_be_unloaded(self):
         if not self.__docked or not self.inbound: return False
-        if self.__dock_time<TIME_DOCK_INBOUND or self.__dead_time_rc<=0.: return False
+        if self.__dock_time<self.__dock_time<TIME_DOCK_INBOUND: return False
+        if self.departure-self.arrival-TIME_DOCK_OUTBOUND< self.__dock_time: return False
+        if self.__dead_time_rc<=0.: return False
         return len(self.truck_load)>0
 
     def can_be_loaded(self):
         if not self.__docked or self.inbound: return False
-        if self.__dock_time<TIME_DOCK_INBOUND or self.__dead_time_rc<=0.: return False
+        if self.__dock_time<self.__dock_time<TIME_DOCK_INBOUND: return False
+        if self.departure-self.arrival-TIME_DOCK_OUTBOUND< self.__dock_time: return False
+        if self.__dead_time_rc<=0.: return False
         return MAX_TRUCK_LOAD-len(self.truck_load)>0
 
     def unload_next_roll_container(self):
