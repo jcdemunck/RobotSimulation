@@ -16,8 +16,26 @@ class BufferStoreManager:
             for buffer in range(N_BUFFER_STORE):
                 self.buffer_dict[self.loc_dp_dict[dock,buffer]].append((dock,buffer))
 
+    def get_sorted_robots(self, robots, dock):
+        docks = [dock]+[dock + pm * (d + 1) for d in range(N_DOCK) for pm in [-1, 1] if 0<=dock + pm * (d + 1)<N_DOCK]
+        return sorted(robots, key=lambda x: docks.index(x.default_pos.dock), reverse=True)
+
     def get_buffer_list(self, dest, prio):
-        return self.buffer_dict[dest, prio]
+        dock_dest = get_output_dock(dest, prio)
+        prio_dict = dict()
+        docks = [dock_dest]+[dock_dest + pm * (d + 1) for d in range(N_DOCK) for pm in [-1, 1] if 0<=dock_dest + pm * (d + 1)<N_DOCK]
+        p = N_BUFFER_STORE*N_DOCK
+        for d, dock in enumerate(docks):
+            if d==0:
+                for b in range(N_BUFFER_STORE):
+                    prio_dict[(dock,b)] = p
+                    p -=1
+            else:
+                for b in range(N_BUFFER_STORE-1, -1, -1):
+                    prio_dict[(dock,b)] = p
+                    p -=1
+
+        return sorted(self.buffer_dict[dest, prio], key=lambda x: prio_dict[x])
 
     def find_available_buffer_store(self, floor_plan, dest, prio):
         dock_store_list = self.buffer_dict[dest, prio]

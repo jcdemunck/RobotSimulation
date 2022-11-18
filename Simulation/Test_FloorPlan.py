@@ -13,8 +13,8 @@ def main():
 
     fp.draw(draw_grid=True)##draw_circulation=True, draw_grid=True)
 
-    pos1 = Position(fp, 12, buffer_lane=1)
-    pos2 = Position(fp, 3, buffer_lane=3)
+    pos1 = Position(fp, 12, parking=0)
+    pos2 = Position(fp, 1, buffer_lane=3)
     path = fp.get_shortest_path(pos1, pos2)
     fp.draw_path(path, (0,0,255))
 

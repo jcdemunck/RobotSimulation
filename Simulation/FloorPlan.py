@@ -67,23 +67,33 @@ class FloorPlan:
 
         self.time_sec = 0.
 
-    def get_robots(self, dock):
-        return [rob for rob in self.robots if rob.default_pos.dock==dock]
-
     def time_step(self):
         for dock in range(N_DOCK):
             self.docks[dock].time_step(self)
 
+            # time step each lane
             for lane in range(N_LANE):
                 buffer_lane = self.buffer_lanes[dock, lane]
                 buffer_lane.time_step()
 
-                if buffer_lane.lane_up:
-                    if buffer_lane.can_be_loaded() and self.docks[dock].roll_container_available():
-                        buffer_lane.store_roll_container(self.docks[dock].get_roll_container())
-                else:
-                    if buffer_lane.can_be_unloaded() and self.docks[dock].can_roll_container_be_stored():
+            # Test if there is an unloaded roll container available at the dock and determine the least loaded lane (if any stores less than MAX_LANE_STORE roll containers)
+            if self.docks[dock].roll_container_available():
+                lane = self.get_best_available_lane(dock, output=False)
+                if lane>=0:
+                    buffer_lane = self.buffer_lanes[dock, lane]
+                    if buffer_lane.can_be_loaded():
+                        buffer_lane.reserve_store()
+                        buffer_lane.store_roll_container(self.docks[dock].get_roll_container()) # load roll container from dock to lane
+
+            # Test if there is a place on the dock for a roll container and if so, unload the first lane that can be unloaded
+            if self.docks[dock].can_roll_container_be_stored():
+                for lane in range(N_LANE):
+                    buffer_lane = self.buffer_lanes[dock, lane]
+                    if buffer_lane.lane_up: continue
+                    if buffer_lane.can_be_unloaded():
                         self.docks[dock].put_roll_container(buffer_lane.pickup_roll_container())
+                        break
+
 
         for rob in self.robots:
             rob.time_step(self)
@@ -94,15 +104,13 @@ class FloorPlan:
         for dock in range(N_DOCK):
             self.docks[dock].set_truck_list(truck_list)
 
-    def get_next_arrival(self, t_start):
+    def get_next_arrival(self):
         t_next = math.inf
         for dock in range(N_DOCK):
-            for truck in self.docks[dock].truck_list:
-                if truck.arrival<=t_start: continue
-                t_next = min(t_next, truck.arrival)
-                break
+            t_arrive = self.docks[dock].truck_list[0].arrival
+            t_next = min(t_next, t_arrive)
 
-        return min(t_next, t_start)
+        return t_next
 
     def are_all_robots_idle(self):
         for rob in self.robots:

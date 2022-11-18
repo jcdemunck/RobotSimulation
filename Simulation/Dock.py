@@ -67,7 +67,8 @@ class Dock:
             self.roll_container.draw(floor_plan)
 
     def time_step(self, floor_plan):
-        if self.truck: self.truck.time_step()
+        if self.truck:
+            self.truck.time_step()
 
         time_sec = floor_plan.time_sec
         if len(self.truck_list)>0 and time_sec>self.truck_list[0].arrival:

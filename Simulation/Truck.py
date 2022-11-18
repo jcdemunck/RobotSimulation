@@ -2,7 +2,11 @@ import cv2 as cv
 import numpy as np
 
 from XdockParams import MAX_TRUCK_LOAD, TIME_DOCK_INBOUND, TIME_DOCK_OUTBOUND, TIME_LOAD_RC_TRUCK, TIME_UNLOAD_RC_TRUCK, TIME_STEP_S,\
-                        W_DOCK, BLACK
+                        BLACK, LOG_DIR
+
+log_file = LOG_DIR + "Trucks.log"
+
+
 
 class Truck:
     lastID = 0
@@ -29,17 +33,23 @@ class Truck:
         self.__dead_time_rc = 0.
 
     def __str__(self):
-        text  = f"ID = {str(self.ID):s}\n"
-        text += f"arrival = {self.arrival:7.2f}\n"
-        text += f"departure = {self.departure:7.2f}\n"
+        text  = f"docked = {str(self.__docked):s}\n"
+        text += f"ID = {str(self.ID):s}\n"
+        text += f"arrival = {self.arrival/3600:7.2f}\n"
+        text += f"departure = {self.departure/3600:7.2f}\n"
         text += f"inbound = {str(self.inbound):s}\n"
         text += f"dock = {self.dock:d}\n"
-        if self.destination:
-            text +=  f"destination = {self.destination:s}\n"
-        if self.prios:
-            text +=  f"prios = {str(self.prios):s}\n"
+        text += f"destination = {str(self.destination):s}\n"
+        text += f"prios = {str(self.prios):s}\n"
         text += f"nrc = {len(self.truck_load):d}\n"
         return text
+
+    def get_log_header(self):
+        return self.__get_log_line(True)
+
+    def __get_log_line(self, header=False):
+        h = 0 if header else 1
+        return "\t".join(kw.split('=')[h].strip() for kw in str(self).split("\n") if len(kw)>1) + '\n'
 
     def draw(self, floor_plan, dock):
         s = 0.2*(dock.w2-dock.w1)
@@ -86,12 +96,17 @@ class Truck:
         else:
             self.__dead_time_rc = -TIME_LOAD_RC_TRUCK
 
+        with open(log_file, "a") as fp:
+            fp.write(self.__get_log_line())
+
     def can_be_undocked(self):
         if not self.__docked: return False
         return self.__dock_time>=self.departure-self.arrival
 
     def undock(self):
         self.__docked = False
+        with open(log_file, "a") as fp:
+            fp.write(self.__get_log_line())
 
     def can_be_unloaded(self):
         if not self.__docked or not self.inbound: return False

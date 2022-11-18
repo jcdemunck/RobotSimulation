@@ -13,6 +13,7 @@ from SimulationConfig import PRIO_LIST, DESTINATIONS, destination_color_dict, ge
 DIR     = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/"
 FILE_IN = "Transport_summary.xlsx"
 
+MIN_TIME_GAP = 30 # minimum time interval [s] between two trucks at a dock
 
 class TruckPlan:
     def __init__(self, simulate, x_dock_name="C_TL"):
@@ -22,6 +23,7 @@ class TruckPlan:
         else:        self.__trucks_from_file(x_dock_name)
 
         self.__assign_docks()
+
         self.start_time = self.truck_list[0].arrival
         self.end_time   = self.truck_list[-1].departure
 
@@ -139,20 +141,20 @@ class TruckPlan:
             gap   = math.inf
             d_min = -1
             for d in range(N_DOCK):
-                times = dock_dict[d]
-                if len(times)==0:  return d
+                intervals = [(triple[2].arrival, triple[2].departure) for triple in dock_dict[d]]
+                if len(intervals)==0:  return d
 
-                if departure<times[0][0]:
-                    if gap>times[0][0]-departure:
-                        gap   = times[0][0]-departure
+                if departure<intervals[0][0]:
+                    if gap>intervals[0][0]-departure:
+                        gap   = intervals[0][0]-departure
                         d_min = d
 
-                if times[-1][1]<arrival:
-                    if gap>arrival-times[-1][1]:
-                        gap   = arrival-times[-1][1]
+                if intervals[-1][1]<arrival:
+                    if gap>arrival-intervals[-1][1]:
+                        gap   = arrival-intervals[-1][1]
                         d_min = d
 
-                for bb, ee in zip(times, times[1:]):
+                for bb, ee in zip(intervals, intervals[1:]):
                     if bb[1]<arrival and departure<ee[0]:
                         if gap>arrival-bb[1]:
                             gap   = arrival-bb[1]
@@ -168,7 +170,7 @@ class TruckPlan:
             groups  = []
             group   = [t1]
             for t2 in trucks[1:]:
-                if t1.departure<=t2.arrival:
+                if t1.departure<t2.arrival: # No overlap
                     groups.append(group)
                     group   = [t2]
                 else:
@@ -176,60 +178,74 @@ class TruckPlan:
                 t1 = t2
             groups.append(group)
 
-    ###        indices = [[trucks.index(t) for t in o] for o in groups]
-    ###        print(destination_from_dock(dock), prio_from_dock(dock), "\t", indices)
-            if len(trucks)==len(groups):
+##            indices = [[trucks.index(t) for t in o] for o in groups]
+##            print(destination_from_dock(dock), prio_from_dock(dock), "\t", indices)
+
+            if len(trucks)==len(groups): # all groups are singletons
                 return
 
-            # Correct time intervals
+            # Shift intervals such that none is overlapping with another. Eventually, each group should contain a single element
             for g, group in enumerate(groups):
-                if len(group)<=1: continue
+                if len(group)<=1: continue # OK, no overlap with other intervals
 
-                t_min = -math.inf if g==0 else groups[g-1][-1].departure
-                t_max =  math.inf if g==len(groups)-1 else groups[g+1][0].arrival
+                # t_min, t_max: available time range for each group
+                t_min = -math.inf if g==0             else groups[g-1][-1].departure + MIN_TIME_GAP
+                t_max =  math.inf if g==len(groups)-1 else groups[g+1][ 0].arrival   - MIN_TIME_GAP
 
                 if t_min==-math.inf and t_max==math.inf:
-                    t_req   = sum(t.departure - t.arrival for t in group)
-                    t_begin = (group[0].arrival + group[-1].departure - t_req) / 2
+                    t_req   = sum(t.departure - t.arrival + MIN_TIME_GAP for t in group) - MIN_TIME_GAP
+                    t_begin = (group[0].arrival + group[-1].departure - t_req)/ 2
                     for t in group:
                         t_dock      = t.departure - t.arrival
                         t.arrival   = t_begin
                         t.departure = t_begin + t_dock
-                        t_begin     = t.departure
+                        t_begin     = t.departure + MIN_TIME_GAP
+
                 elif t_min==-math.inf:
                     t_end = (t_max + group[-1].departure) / 2
                     for t in reversed(group):
                         t_dock      = t.departure-t.arrival
                         t.departure = t_end
                         t.arrival   = t_end-t_dock
-                        t_end       = t.arrival
+                        t_end       = t.arrival - MIN_TIME_GAP
+
                 elif t_max==math.inf:
                     t_begin = (t_min +group[0].arrival) / 2
                     for t in group:
                         t_dock      = t.departure - t.arrival
                         t.arrival   = t_begin
                         t.departure = t_begin + t_dock
-                        t_begin     = t.departure
+                        t_begin     = t.departure + MIN_TIME_GAP
                 else:
-                    t_req   = sum(t.departure - t.arrival for t in group)
+                    t_req   = sum(t.departure - t.arrival + MIN_TIME_GAP for t in group) - MIN_TIME_GAP
                     t_begin = (t_min + t_max - t_req) / 2
                     for t in group:
                         t_dock      = t.departure - t.arrival
                         t.arrival   = t_begin
                         t.departure = t_begin + t_dock
-                        t_begin     = t.departure
-            # Test
-            correct_overlap(trucks)
+                        t_begin     = t.departure + MIN_TIME_GAP
 
-    #    for dest in DESTINATIONS:
-    #        for prio in PRIO_LIST:
-    #            tl = sorted([truck for truck in truck_list if truck.destination==dest and prio in truck.prios], key=lambda t: t.arrival)
-    #            if len(tl)<2: continue
-    #            print(dest, "\t", prio, "\trange:", tl[0].arrival / 3600, "-",tl[-1].departure / 3600)
+                # shift previous intervals backwards if enlarged spacing causes overlap
+                if g>0 and groups[g-1][-1].departure+MIN_TIME_GAP>group[0].arrival:
+                    shift = groups[g-1][-1].departure+MIN_TIME_GAP-group[0].arrival
+                    for gg in range(g):
+                        for t in groups[gg]:
+                            t.arrival   -= shift
+                            t.departure -= shift
 
+                # shift subsequent intervals forward if enlarged spacing causes overlap
+                if g<len(groups)-1 and group[-1].departure+MIN_TIME_GAP>groups[g+1][0].arrival:
+                    shift = group[-1].departure+MIN_TIME_GAP-groups[g+1][0].arrival
+                    for gg in range(g+1, len(groups)):
+                        for t in groups[gg]:
+                            t.arrival   += shift
+                            t.departure += shift
+
+        # First sort all intervals based on arrival times
         self.truck_list.sort(key=lambda t: t.arrival)
 
-        # first plan departing trucks (that need specific dock)
+        # Plan departing trucks (that need specific dock)
+        # Each value of dock_dict contains a list of ordered triples: (arrival, unique integer, truck)
         dock_dict = dict([(d, []) for d in range(N_DOCK)])
         for truck in self.truck_list:
             if truck.inbound: continue
@@ -246,16 +262,47 @@ class TruckPlan:
             print(destination_from_dock(dock), prio_from_dock(dock), "\t", "Range after correction: ",trucks[0].arrival/3600,'-',trucks[-1].departure/3600)
 
         # put incoming trucks in empty holes
+        remove_list = []
         for t,truck in enumerate(self.truck_list):
             if truck.inbound:
                 truck.dock = find_dock(truck.arrival, truck.departure)
                 if truck.dock<0:
-                    print("ERROR. assign_docks(). No dock found for inbound: ", t, "\t",truck)
-                    print("\toccupation")
-                    for d in range(N_DOCK):
-                        print("\t",dock_dict[d])
+                    print("ERROR. assign_docks(). No dock found for inbound: ", t,"of", len(self.truck_list), "\t",truck)
+                    remove_list.append(truck)
+                    continue
 
                 bi.insort(dock_dict[truck.dock], (truck.arrival, len(dock_dict[truck.dock]), truck))
+
+        for t in remove_list:
+            self.truck_list.remove(t)
+
+        self.test_planning()
+
+    def test_planning(self):
+        for dock in range(N_DOCK):
+            trucks = [t for t in self.truck_list if t.dock==dock]
+            print("dock = ", dock, destination_from_dock(dock), prio_from_dock(dock))
+
+            n_error = 0
+            if len(trucks)<=0:
+                print("no trucks")
+                continue
+            t_old = trucks[0]
+            if t_old.arrival>=t_old.departure:
+                n_error +=1
+                print("ERROR. Inconsistent dep/arr", t_old)
+
+            for i,t in enumerate(trucks[1:], start=1):
+                if t.arrival>=t.departure:
+                    n_error += 1
+                    print("ERROR. Inconsistent dep/arr", t)
+
+                if t_old.departure>=t.arrival:
+                    n_error += 1
+                    print("ERROR. Overlapping dep/arr. gap=", t.arrival-t_old.departure,"i=", i)
+                t_old = t
+            if n_error==0:
+                print("OK")
 
 
 def main():

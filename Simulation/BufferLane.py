@@ -38,6 +38,14 @@ class BufferLane:
 
         self.n_store_reserved = 0
 
+    def __str__(self):
+        text  = f"lane_up  = {str(self.lane_up):s} \n"
+        text += f"dock     = {self.dock:d} \n"
+        text += f"lane     = {self.lane:d}\n"
+        text += f"n_store_reserved = {self.n_store_reserved:d}\n"
+        text += f"n_stored = {len(self.store):d}\n"
+        return text
+
     def get_expected_roll_containers(self):
         """
             return list of expected roll containers as tuples:
@@ -105,3 +113,4 @@ class BufferLane:
             if not self.lane_up:
                 self.dead_time_down =-TIME_LOAD_BUFFER_LANE
             return self.store.pop(0)
+        print("ERROR: BufferLane.pickup_roll_container(). Store empty.", str(self))

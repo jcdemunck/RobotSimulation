@@ -8,11 +8,19 @@ from SimulationConfig import destination_color_dict, PRIO_LIST
 from Robot import BSM
 
 class BufferStoreRow:
-    def __init__(self, w_dict, h):
+    def __init__(self, w_dict, h, row, parent):
         self.n_store_reserved = 0 # number of places reserved for storage
+        self.row              = row
+        self.parent           = parent
         self.store            = []
         self.w_dict           = w_dict
         self.h                = h
+
+    def __str__(self):
+        text  = f"parent = {str(self.parent):s} \n"
+        text += f"n_store_reserved = {self.n_store_reserved:d}\n"
+        text += f"n_stored = {len(self.store):d}\n"
+        return text
 
     def get_n_stored(self):
         return len(self.store)
@@ -42,17 +50,17 @@ class BufferStoreRow:
         return len([r for r in self.store if not r.scheduled])
 
     def schedule_roll_container(self):
-        for rol in reversed(self.store):
+        for c, rol in enumerate(reversed(self.store)):
             if rol.scheduled: continue
             rol.scheduled = True
-            return
+            return N_COMP_X-1-c
+        return -1
 
     def pickup_roll_container(self):
-        if len(self.store)<=0:
-            return
-
-        self.n_store_reserved -= 1
-        return self.store.pop(-1)
+        if len(self.store)>0:
+            self.n_store_reserved -= 1
+            return self.store.pop(-1)
+        print("ERROR: BufferStoreRow.pickup_roll_container(). Store empty.", str(self))
 
 class BufferStore:
     def __init__(self, dock, buffer):
@@ -82,7 +90,14 @@ class BufferStore:
 
         self.w_dict = dict([(col, round_coord(self.w1 + (col+0.5)*W_COMPARTMENT)) for col in range(N_COMP_X)])
         self.h_dict = dict([(row, round_coord(self.h1 + (row+0.5)*H_COMPARTMENT)) for row in range(N_COMP_Y)])
-        self.store  = [BufferStoreRow(self.w_dict, self.h_dict[row]) for row in range(N_COMP_Y)]
+        self.store  = [BufferStoreRow(self.w_dict, self.h_dict[row], row, self) for row in range(N_COMP_Y)]
+
+    def __str__(self):
+        text  = f"dock      = {self.dock:d} \n"
+        text += f"buffer    = {self.buffer:d} \n"
+        text += f"is_store_unused = {str(self.is_store_unused()):s}\n"
+        text += f"first available store = {self.get_first_available_store():d}\n"
+        return text
 
     def is_store_unused(self):
         for row_store in self.store:
@@ -115,7 +130,10 @@ class BufferStore:
 
     def pickup_roll_container(self, row):
         if row>=N_COMP_Y: return
-        return self.store[row].pickup_roll_container()
+        rol = self.store[row].pickup_roll_container()
+        if not rol is None:  return rol
+        print("ERROR: BufferStore.pickup_roll_container(). Store empty?", str(self))
+
 
     def get_grid_coords(self, row=-1, col=-1, corner=-1):
         if row<0 or col<0:

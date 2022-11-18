@@ -11,6 +11,10 @@ from TruckPlan import TruckPlan
 from Truck import Truck
 from Robot import BSM
 
+from Truck import log_file
+with open(log_file, "w") as fp:
+    dummy = Truck(0.,0., (0,0,0))
+    fp.write(dummy.get_log_header())
 
 TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
 
@@ -41,7 +45,7 @@ def main():
     cv.moveWindow("Test", 10, 10)
     cv.waitKey(0)
 
-    P = TruckPlan(True)
+    P = TruckPlan(False)
     truck_list  = P.truck_list
     samp_start  = int(P.start_time/TIME_STEP_S)
     samp_end    = int(P.end_time  /TIME_STEP_S)
@@ -52,10 +56,10 @@ def main():
     for sample in range(samp_start, samp_end):
         time_sec       = sample*TIME_STEP_S
 
-        if fp.are_all_robots_idle():
-            time_next = fp.get_next_arrival(time_sec)-1.
-            if time_next>time_sec+2*TIME_STEP_S:
-                continue
+#        if fp.are_all_robots_idle():
+#            time_next = fp.get_next_arrival()
+#            if time_next>time_sec+2*TIME_STEP_S:
+#                continue
 
         if len(truck_list)>0 and time_sec>truck_list[0].arrival:
             truck = truck_list.pop(0)
@@ -84,22 +88,27 @@ def main():
 
             else:
                 buffer_list = BSM.get_buffer_list(proc.destination, proc.prios[0])
-                for (dock,store) in buffer_list: # plan robots from buffer store to output lane
-                    if fp.buffer_stores[dock, store].is_store_unused(): continue
+                buffer_list = [(d, b) for (d,b) in buffer_list if not fp.buffer_stores[d, b].is_store_unused()]
 
-                    dock_dest = get_output_dock(proc.destination, proc.prios[0])
+                dock_dest   = get_output_dock(proc.destination, proc.prios[0])
+                rob_list    = BSM.get_sorted_robots(fp.robots, dock_dest)
+                r           = 0
+                for (dock,store) in buffer_list: # plan robots from buffer store to output lane
                     row       = fp.buffer_stores[dock, store].get_row_not_scheduled()
                     lane      = fp.get_best_available_lane(dock_dest, output=True)
-                    if row<0 or lane<0: continue
 
-                    fp.buffer_stores[dock, store].schedule_roll_container(row)
-                    fp.buffer_lanes[dock_dest, lane].reserve_store()
+                    while lane>=0 and row>=0:
+                        fp.buffer_stores[dock, store].schedule_roll_container(row)
+                        fp.buffer_lanes[dock_dest, lane].reserve_store()
 
-                    pos_pickup = Position(fp, dock, buffer_store=store, row=row, col=0)
-                    pos_unload = Position(fp, dock_dest, buffer_lane=lane)
-
-                    for rob in fp.get_robots(dock_dest):
+                        pos_pickup = Position(fp, dock, buffer_store=store, row=row, col=0)
+                        pos_unload = Position(fp, dock_dest, buffer_lane=lane)
+                        rob = rob_list[r]
                         rob.insert_process_store(fp, pos_pickup, pos_unload)
+
+                        r    = (r+1)%len(rob_list)
+                        row  = fp.buffer_stores[dock, store].get_row_not_scheduled()
+                        lane = fp.get_best_available_lane(dock_dest, output=True)
 
             truck_process_list = [proc for proc in truck_process_list if proc.nrc_not_assigned>0 or not proc.inbound]
 
