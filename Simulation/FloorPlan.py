@@ -306,25 +306,40 @@ class FloorPlan:
             p1 = p
 
     def __draw_legends(self):
-        w1 = 0.
-        w2 = W_DOCK/2
-        w3 = W_DOCK
-        h  = 1.01 * H_FLOOR
+        # Arrow to denote width of one dock
+        h   = 1.01 * H_FLOOR
+        pt1 = self.pnt_from_coords(0.      , h)
+        pt2 = self.pnt_from_coords(W_DOCK/2, h)
+        pt3 = self.pnt_from_coords(W_DOCK  , h)
 
-        pt1 = self.pnt_from_coords(w1, h)
-        pt2 = self.pnt_from_coords(w2, h)
-        pt3 = self.pnt_from_coords(w3, h)
+        l = get_distance(pt1, pt2)
+        self.figure = cv.arrowedLine(self.figure, pt2, pt1, (0, 0, 255), 2, tipLength=5 / l if l>0. else 0.)
+        self.figure = cv.arrowedLine(self.figure, pt2, pt3, (0, 0, 255), 2, tipLength=5 / l if l>0. else 0.)
 
-        self.figure = cv.arrowedLine(self.figure, pt2, pt1, (0, 0, 255), 2)
-        self.figure = cv.arrowedLine(self.figure, pt2, pt3, (0, 0, 255), 2)
-
+        # print width
         pt   = self.pnt_from_coords(W_DOCK/3, 1.01*h)
         text = f"{W_DOCK:5.1f} m"
         font = cv.FONT_HERSHEY_SIMPLEX
-        self.figure = cv.putText(self.figure, text, pt, font, 0.6, BLACK)
+        self.figure = cv.putText(self.figure, text, pt, font, 0.4, BLACK)
 
-        header_time = f"t={int(self.time_sec) // 3600:2d}:{(int(self.time_sec) // 60) % 60:2d}:{int(self.time_sec) % 60:02d}"
-        pt = self.pnt_from_coords((N_DOCK-1)*W_DOCK, 1.01 * h)
+        # Arrow denoting height of cross dock floor
+        w   = 1.01 * W_FLOOR
+        pt1 = self.pnt_from_coords(w, 0.       )
+        pt2 = self.pnt_from_coords(w, H_FLOOR/2)
+        pt3 = self.pnt_from_coords(w, H_FLOOR  )
+
+        l = get_distance(pt1, pt2)
+        self.figure = cv.arrowedLine(self.figure, pt2, pt1, (0, 0, 255), 2, tipLength=5 / l if l>0. else 0.)
+        self.figure = cv.arrowedLine(self.figure, pt2, pt3, (0, 0, 255), 2, tipLength=5 / l if l>0. else 0.)
+
+        # print height
+        text = f"{H_FLOOR:5.1f} m"
+        font = cv.FONT_HERSHEY_SIMPLEX
+        pt   = self.pnt_from_coords(0.995*W_FLOOR, H_FLOOR/2)
+        self.figure = cv.putText(self.figure, text, pt, font, 0.4, BLACK)
+
+        header_time = f"t={int(self.time_sec)%24 // 3600:02d}:{(int(self.time_sec) // 60) % 60:02d}:{int(self.time_sec) % 60:02d}"
+        pt = self.pnt_from_coords((N_DOCK-1.1)*W_DOCK, 1.01 * h)
         self.figure = cv.putText(self.figure, header_time, pt, font, 0.6, BLACK)
 
     def __draw_circulation(self, dock):

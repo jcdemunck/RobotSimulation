@@ -1,9 +1,12 @@
+from collections import defaultdict, Counter
 import cv2 as cv
 
 
 from XdockParams import TIME_STEP_S, W_FLOOR, H_FLOOR, \
                         ROBOT_SPEED, ROBOT_LOAD_TIME, ROBOT_UNLOAD_TIME, W1_ROBOT, W2_ROBOT, H1_ROBOT, H2_ROBOT, \
+                        LOG_DIR, LOG_INTERVAL_ROBOT,\
                         get_orientation, get_distance_city_block, get_path_len
+
 from BufferStoreManager import BufferStoreManager
 
 
@@ -14,6 +17,8 @@ def print_tasks(task_list):
         print(t, task.task_type)
 
 class RobotTask:
+    log_tasks = ["park", "no_task", "goto_buffer_lane", "goto_buffer_store", "goto_parking", "goto", "pickup_lane", "pickup_store", "unload", "wait"]
+
     def __init__(self, wait=-1., floor_plan=None, goto_pos=None, load_lane=None, load_store=None, unload=None):
         self.task_type = "no_task"
         self.finished  = True
@@ -127,9 +132,10 @@ class RobotTask:
                 self.wait -= TIME_STEP_S
 
         elif self.task_type=="wait":
-            self.wait -= TIME_STEP_S
             if self.wait<=0.:
                 self.finished = True
+            else:
+                self.wait -= TIME_STEP_S
 
     def get_time_to_finish(self):
         if self.finished:
@@ -139,6 +145,46 @@ class RobotTask:
         if self.task_type=="wait":
             return self.wait
         return TIME_STEP_S
+
+from functools import update_wrapper, partial
+class RobotLogger:
+    def __init__(self, func):
+        update_wrapper(self, func)
+        self.func = func
+
+        self.time     = 0.
+        self.samp     = 0
+        self.rob_dict = defaultdict(Counter)
+        self.log_file = LOG_DIR + "Robots.log"
+
+    def __get__(self, obj, objtype):
+        return partial(self.__call__, obj)
+
+    def __call__(self, rob, *args, **kwargs):
+        if rob.ID==0:
+            if self.samp==0:
+                if self.time==0.:
+                    with open(self.log_file, "w") as fp:
+                        fp.write("time\tID\t"+'\t'.join(RobotTask.log_tasks)+'\n')
+
+                with open(self.log_file, "a") as fp:
+                    for id in sorted(self.rob_dict):
+                        if id>=0:
+                            line = f"{self.time:8.1f}\t{str(id) :s}\t" + '\t'.join(str(self.rob_dict[id][t]) for t in RobotTask.log_tasks) + '\n'
+                        else:
+                            line = f"{self.time:8.1f}\ttotal\t" + '\t'.join(str(self.rob_dict[id][t]) for t in RobotTask.log_tasks) + '\n'
+                        fp.write(line)
+
+            self.time += TIME_STEP_S
+            self.samp += 1
+            if self.samp*TIME_STEP_S >= LOG_INTERVAL_ROBOT:
+                self.samp = 0
+
+        task = "park" if len(rob.task_list)==0 else rob.task_list[0].task_type
+        self.rob_dict[rob.ID][task] += 1
+        self.rob_dict[-1    ][task] += 1
+
+        return self.func(rob, *args, **kwargs)
 
 class Robot:
     lastID = 0
@@ -166,6 +212,7 @@ class Robot:
         if self.o==0 or self.o==2:    return coords[0] + (s if self.o==0 else -s), coords[1]
         if self.o==1 or self.o==3:    return coords[0], coords[1] + (s if self.o==1 else -s)
 
+    @RobotLogger
     def time_step(self, floor_plan):
         if len(self.task_list)<=0: return
 
@@ -217,47 +264,49 @@ class Robot:
                           RobotTask()]
 
     def append_process_incoming(self, floor_plan, pos_pickup):
-        task_list = []
-        parking   = False
-        for task in self.task_list:
-            if task.task_type=="goto_parking":
-                parking = True
-            if parking and task.task_type=="no_task":
-                break
-            task_list.append(task)
+        n_task      = len(self.task_list)
+        task_list   = []
+        end_list    = n_task
+        if n_task==0:
+            end_list = 1
+        else:
+            for t,task in enumerate(reversed(self.task_list)):
+                if task.task_type=="goto_parking":
+                    end_list = n_task+1-t
+                    break
+            if end_list<=2:
+                task_list =  [self.task_list[0], self.task_list[1]]
+            else:
+                task_list = self.task_list[:end_list-2]
 
         self.task_list = task_list +  \
                         [RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
                          RobotTask(wait=ROBOT_LOAD_TIME, load_lane=pos_pickup.get_store_object(floor_plan)),
                          RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos),
-                         RobotTask()]
+                         RobotTask()] + \
+                        self.task_list[end_list:]
 
     def insert_process_store(self, floor_plan, pos_pickup, pos_unload):
+        end_list    = len(self.task_list)
         task_list   = []
-        t_pickup    = -1
-        parking     = False
-        for t,task in enumerate(self.task_list):
-            if task.task_type=="goto_parking:":
-                parking = True
-            if parking and task.task_type=="no_task":
-                break
-            task_list.append(task)
-            if task.task_type=="pickup_lane":
-                t_pickup = t+1
-                break
+        if len(self.task_list)>0 and self.task_list[0].task_type=="goto_parking":
+            end_list  = 2
+            task_list = [self.task_list[0], self.task_list[1]]
+        else:
+            for t,task in enumerate(self.task_list):
+                if task.task_type=="goto_parking":
+                    end_list = t+2
+                    break
+                task_list.append(task)
 
-        task_list = task_list +  \
+        self.task_list = task_list +  \
                         [RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
                          RobotTask(wait=ROBOT_LOAD_TIME, load_store=pos_pickup.get_store_object(floor_plan)),
                          RobotTask(floor_plan=floor_plan, goto_pos=pos_unload),
                          RobotTask(wait=ROBOT_UNLOAD_TIME, unload=pos_unload.get_store_object(floor_plan)),
                          RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos),
-                         RobotTask()]
-
-        if 0<t_pickup<len(task_list):
-            self.task_list = task_list + self.task_list[t_pickup:]
-        else:
-            self.task_list = task_list
+                         RobotTask()] + \
+                        self.task_list[end_list:]
 
     def __insert_process_incoming(self, floor_plan):
         pos_store = BSM.choose_store(floor_plan, self.rol)
@@ -267,13 +316,8 @@ class Robot:
         # insert new tasks
         self.task_list = task_list+self.task_list
 
-        # append goto parking
-        for ta in reversed(self.task_list):
-            if len(ta.path)>0:
-                if ta.task_type!="goto_parking":
-                    self.task_list +=[RobotTask(floor_plan=floor_plan, goto_pos=self.default_pos),
-                                      RobotTask()]
-                break
+
+        return
 
     def is_idle(self):
         return len(self.task_list)==0

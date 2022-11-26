@@ -16,6 +16,8 @@ with open(log_file, "w") as fp:
     dummy = Truck(0.,0., (0,0,0))
     fp.write(dummy.get_log_header())
 
+
+SIMULATE        = True
 TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
 
 N_VIDEO_FRAME  = -1
@@ -45,7 +47,7 @@ def main():
     cv.moveWindow("Test", 10, 10)
     cv.waitKey(0)
 
-    P = TruckPlan(False)
+    P = TruckPlan(SIMULATE)
     truck_list  = P.truck_list
     samp_start  = int(P.start_time/TIME_STEP_S)
     samp_end    = int(P.end_time  /TIME_STEP_S)
@@ -77,7 +79,7 @@ def main():
                     pos_pickup = Position(fp, dock, buffer_lane=roll_io.lane)
 
                     if robot.is_idle():
-                        wait  = max(0., roll_io.eta-robot.get_time_to_pos(fp, pos_pickup) + proc.wait_time)
+                        wait  = max(0., roll_io.eta + proc.wait_time -robot.get_time_to_pos(fp, pos_pickup) )
                         robot.wait_process_incoming(fp, wait, pos_pickup)
                     else:
                         robot.append_process_incoming(fp, pos_pickup)
