@@ -95,6 +95,9 @@ class BufferLane:
         for rol in self.store:
             rol.draw(floor_plan)
 
+    def get_n_stored(self):
+        return len(self.store)
+
     def reserve_store(self):
         self.n_store_reserved += 1
 
@@ -113,4 +116,4 @@ class BufferLane:
             if not self.lane_up:
                 self.dead_time_down =-TIME_LOAD_BUFFER_LANE
             return self.store.pop(0)
-        print("ERROR: BufferLane.pickup_roll_container(). Store empty.", str(self))
+        print("ERROR: BufferLane.pickup_roll_container(). Store empty.\n", str(self))

@@ -33,6 +33,7 @@ class BufferStoreRow:
 
     def store_roll_container(self, rol):
         if len(self.store)>=N_COMP_X:
+            print("ERROR: BufferStoreRow.store_roll_container(). Buffer overflow\n", self, "\nrol =", str(rol).replace('\n','\t'))
             return
 
         # update roll container coordinates
@@ -60,7 +61,7 @@ class BufferStoreRow:
         if len(self.store)>0:
             self.n_store_reserved -= 1
             return self.store.pop(-1)
-        print("ERROR: BufferStoreRow.pickup_roll_container(). Store empty.", str(self))
+        print("ERROR: BufferStoreRow.pickup_roll_container(). Store empty.\n", str(self))
 
 class BufferStore:
     def __init__(self, dock, buffer):

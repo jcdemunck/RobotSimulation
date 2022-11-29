@@ -4,6 +4,7 @@ from XdockParams import W_ROLL_CONTAINER, H_ROLL_CONTAINER, BLACK
 
 
 class RollContainer:
+    lastID = 0
     def __init__(self, w, h, orientation, destination, prio, color):
         self.w         = w
         self.h         = h
@@ -12,6 +13,17 @@ class RollContainer:
         self.col       = color
         self.prio      = prio
         self.scheduled = False
+        self.ID        = RollContainer.lastID
+        RollContainer.lastID += 1
+
+    def __str__(self):
+        text  = f"ID = {self.ID:d}\n"
+        text += f"dest = {self.dest:s}\n"
+        text += f"scheduled = {str(self.scheduled):s}\n"
+        text += f"w = {self.w:7.2f}\n"
+        text += f"h = {self.h:7.2f}\n"
+        text += f"o = {self.o:d}\n"
+        return text
 
     def draw(self, floor_plan):
         w1 = self.w - 0.5*W_ROLL_CONTAINER

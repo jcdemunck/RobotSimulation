@@ -18,7 +18,7 @@ class BufferStoreManager:
 
     def get_sorted_robots(self, robots, dock):
         docks = [dock]+[dock + pm * (d + 1) for d in range(N_DOCK) for pm in [-1, 1] if 0<=dock + pm * (d + 1)<N_DOCK]
-        return sorted(robots, key=lambda x: docks.index(x.default_pos.dock), reverse=True)
+        return sorted(robots, key=lambda x: docks.index(x.default_pos.dock) + len(x.task_list))
 
     def get_buffer_list(self, dest, prio):
         dock_dest = get_output_dock(dest, prio)
@@ -62,7 +62,7 @@ class BufferStoreManager:
 
         print("ERROR: BufferStoreManager.find_available_buffer_store(). Cannot find unused buffer. ")
 
-    def choose_store(self, floor_plan, roll_container):
+    def choose_and_reserve_store(self, floor_plan, roll_container):
         dest = roll_container.dest
         prio = roll_container.prio
         dock = get_output_dock(dest, prio)

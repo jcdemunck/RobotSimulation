@@ -11,13 +11,7 @@ from TruckPlan import TruckPlan
 from Truck import Truck
 from Robot import BSM
 
-from Truck import log_file
-with open(log_file, "w") as fp:
-    dummy = Truck(0.,0., (0,0,0))
-    fp.write(dummy.get_log_header())
-
-
-SIMULATE        = True
+SIMULATE        = False
 TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
 
 N_VIDEO_FRAME  = -1
@@ -57,11 +51,6 @@ def main():
     truck_process_list = []
     for sample in range(samp_start, samp_end):
         time_sec       = sample*TIME_STEP_S
-
-#        if fp.are_all_robots_idle():
-#            time_next = fp.get_next_arrival()
-#            if time_next>time_sec+2*TIME_STEP_S:
-#                continue
 
         if len(truck_list)>0 and time_sec>truck_list[0].arrival:
             truck = truck_list.pop(0)

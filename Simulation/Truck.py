@@ -4,9 +4,31 @@ import numpy as np
 from XdockParams import MAX_TRUCK_LOAD, TIME_DOCK_INBOUND, TIME_DOCK_OUTBOUND, TIME_LOAD_RC_TRUCK, TIME_UNLOAD_RC_TRUCK, TIME_STEP_S,\
                         BLACK, LOG_DIR
 
-log_file = LOG_DIR + "Trucks.log"
 
+from functools import update_wrapper, partial
+class TruckLogger:
+    def __init__(self, func):
+        update_wrapper(self, func)
+        self.func      = func
+        self.log_file  = LOG_DIR + "Trucks.log"
+        self.init      = False
 
+    def __get__(self, obj, objtype):
+        return partial(self.__call__, obj)
+
+    def __call__(self, truck, *args, **kwargs):
+        result = self.func(truck, *args, **kwargs)
+
+        if not self.init:
+            self.init=True
+            dummy = Truck(0., 0., (0, 0, 0))
+            with open(self.log_file, "w") as fp:
+                fp.write(dummy._get_log_line(header=True))
+
+        with open(self.log_file, "a") as fp:
+            fp.write(truck._get_log_line())
+
+        return result
 
 class Truck:
     lastID = 0
@@ -44,10 +66,7 @@ class Truck:
         text += f"nrc = {len(self.truck_load):d}\n"
         return text
 
-    def get_log_header(self):
-        return self.__get_log_line(True)
-
-    def __get_log_line(self, header=False):
+    def _get_log_line(self, header=False):
         h = 0 if header else 1
         return "\t".join(kw.split('=')[h].strip() for kw in str(self).split("\n") if len(kw)>1) + '\n'
 
@@ -88,6 +107,7 @@ class Truck:
         if self.__dock_time>=TIME_DOCK_INBOUND:
             self.__dead_time_rc += TIME_STEP_S
 
+    @TruckLogger
     def start_docking(self):
         self.__docked    = True
         self.__dock_time = 0.
@@ -96,17 +116,13 @@ class Truck:
         else:
             self.__dead_time_rc = -TIME_LOAD_RC_TRUCK
 
-        with open(log_file, "a") as fp:
-            fp.write(self.__get_log_line())
-
     def can_be_undocked(self):
         if not self.__docked: return False
         return self.__dock_time>=self.departure-self.arrival
 
+    @TruckLogger
     def undock(self):
         self.__docked = False
-        with open(log_file, "a") as fp:
-            fp.write(self.__get_log_line())
 
     def can_be_unloaded(self):
         if not self.__docked or not self.inbound: return False

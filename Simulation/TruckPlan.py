@@ -86,10 +86,10 @@ class TruckPlan:
                            create_truck(48, None, 510.),
                            create_truck(48, None, 600.),
                            create_truck(48, None, 600.),
-                         #  create_truck(0, "ELT",1500., high_prio=False),
+                           create_truck(0, "ELT",1500., high_prio=False),
                            create_truck(0, "ELT",3700., high_prio=False),
                            create_truck(0, "ELT",2110., high_prio=True),
-                         #  create_truck(0, "ELT",2600., high_prio=False),
+                           create_truck(0, "ELT",2600., high_prio=False),
                            create_truck(0, "HGL", 2000., high_prio=True)]
 
 

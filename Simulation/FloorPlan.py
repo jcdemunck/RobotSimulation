@@ -62,7 +62,7 @@ class FloorPlan:
             parking_pos = Position(self, dock=r%N_DOCK, parking=r//N_DOCK)
             if parking_pos is None:
                 break
-            color = None if (r//N_DOCK)%2 else (0, 0, 255)
+            color = None if r!=10 else (0, 0, 255)
             self.robots.append(Robot(parking_pos.w, parking_pos.h, parking_pos, color))
 
         self.time_sec = 0.
@@ -85,15 +85,13 @@ class FloorPlan:
                         buffer_lane.reserve_store()
                         buffer_lane.store_roll_container(self.docks[dock].get_roll_container()) # load roll container from dock to lane
 
-            # Test if there is a place on the dock for a roll container and if so, unload the first lane that can be unloaded
+            # Test if there is a place on the dock for a roll container and if so, unload the best lane that can be unloaded
             if self.docks[dock].can_roll_container_be_stored():
-                for lane in range(N_LANE):
+                lane = self.get_best_available_lane(dock, output=True, loading=False)
+                if lane>=0:
                     buffer_lane = self.buffer_lanes[dock, lane]
-                    if buffer_lane.lane_up: continue
                     if buffer_lane.can_be_unloaded():
                         self.docks[dock].put_roll_container(buffer_lane.pickup_roll_container())
-                        break
-
 
         for rob in self.robots:
             rob.time_step(self)
@@ -126,17 +124,28 @@ class FloorPlan:
 
         return sorted(roll_containers, key=lambda x: x[0])
 
-    def get_best_available_lane(self, dock, output=True):
-        n_min    =  MAX_LANE_STORE+1
-        lane_min = -1
-        for lane in range(N_LANE):
-            buffer_lane = self.buffer_lanes[dock, lane]
-            if (buffer_lane.lane_up and output) or (not buffer_lane.lane_up and not output): continue
-            if buffer_lane.n_store_reserved>=MAX_LANE_STORE: continue
-            if buffer_lane.n_store_reserved<n_min:
-                lane_min = lane
-                n_min    = buffer_lane.n_store_reserved
-        return lane_min
+    def get_best_available_lane(self, dock, output=True, loading=True):
+        if loading:
+            n_min    =  MAX_LANE_STORE+1
+            lane_min = -1
+            for lane in range(N_LANE):
+                buffer_lane = self.buffer_lanes[dock, lane]
+                if (buffer_lane.lane_up and output) or (not buffer_lane.lane_up and not output): continue
+                if buffer_lane.n_store_reserved>=MAX_LANE_STORE: continue
+                if buffer_lane.n_store_reserved<n_min:
+                    lane_min = lane
+                    n_min    = buffer_lane.n_store_reserved
+            return lane_min
+        else:
+            n_max    =  0
+            lane_max = -1
+            for lane in range(N_LANE):
+                buffer_lane = self.buffer_lanes[dock, lane]
+                if (buffer_lane.lane_up and output) or (not buffer_lane.lane_up and not output): continue
+                if buffer_lane.get_n_stored()>n_max:
+                    lane_max = lane
+                    n_max    = buffer_lane.get_n_stored()
+            return lane_max
 
     def draw(self, draw_grid=False, draw_circulation=False):
         self.figure = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)
@@ -338,7 +347,7 @@ class FloorPlan:
         pt   = self.pnt_from_coords(0.995*W_FLOOR, H_FLOOR/2)
         self.figure = cv.putText(self.figure, text, pt, font, 0.4, BLACK)
 
-        header_time = f"t={int(self.time_sec)%24 // 3600:02d}:{(int(self.time_sec) // 60) % 60:02d}:{int(self.time_sec) % 60:02d}"
+        header_time = f"t={(int(self.time_sec) // 3600 ) % 24:02d}:{(int(self.time_sec) // 60) % 60:02d}:{int(self.time_sec) % 60:02d}"
         pt = self.pnt_from_coords((N_DOCK-1.1)*W_DOCK, 1.01 * h)
         self.figure = cv.putText(self.figure, header_time, pt, font, 0.6, BLACK)
 
