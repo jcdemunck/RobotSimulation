@@ -7,7 +7,7 @@ import os
 import sys
 import inspect
 
-from XdockParams import H_FLOOR, W_FLOOR, N_DOCK, W_DOCK, N_LANE, MAX_LANE_STORE, N_BUFFER_STORE, N_COMP_X, N_COMP_Y, \
+from XdockParams import H_FLOOR, W_FLOOR, N_DOCK, W_DOCK, N_LANE, MAX_LANE_STORE, N_BUFFER_STORE, N_COMP_X, N_COMP_Y, H_LANE, \
                         TIME_STEP_S, \
                         BLACK, \
                         get_distance_city_block, get_distance
@@ -65,7 +65,10 @@ class FloorPlan:
             color = None if r!=10 else (0, 0, 255)
             self.robots.append(Robot(parking_pos.w, parking_pos.h, parking_pos, color))
 
-        self.time_sec = 0.
+        # Legends parameters
+        self.time_sec     = 0.
+        self.n_trucks_in  = 0
+        self.n_trucks_out = 0
 
     def time_step(self):
         for dock in range(N_DOCK):
@@ -99,6 +102,9 @@ class FloorPlan:
         self.time_sec += TIME_STEP_S
 
     def set_truck_list(self, truck_list):
+        self.n_trucks_in  = len([t for t in truck_list if t.inbound])
+        self.n_trucks_out = len([t for t in truck_list if not t.inbound])
+
         for dock in range(N_DOCK):
             self.docks[dock].set_truck_list(truck_list)
 
@@ -350,6 +356,27 @@ class FloorPlan:
         header_time = f"t={(int(self.time_sec) // 3600 ) % 24:02d}:{(int(self.time_sec) // 60) % 60:02d}:{int(self.time_sec) % 60:02d}"
         pt = self.pnt_from_coords((N_DOCK-1.1)*W_DOCK, 1.01 * h)
         self.figure = cv.putText(self.figure, header_time, pt, font, 0.6, BLACK)
+
+        if self.n_trucks_in>0 and self.n_trucks_out>0:
+            w1 = W_FLOOR
+            w2 = W_FLOOR + 0.7*W_DOCK
+            h1 = -H_LANE / 8
+            h2 = 0.
+            h3 = (h1+h2)/2
+
+            for out in [False, True]:
+                if out:
+                    frac = sum(self.docks[dock].get_n_trucks_todo(False) for dock in range(N_DOCK))/self.n_trucks_out
+                    pt1  = self.pnt_from_coords(w1, h1)
+                    pt2  = self.pnt_from_coords(w2-frac*(w2-w1), h3)
+                else:
+                    frac = sum(self.docks[dock].get_n_trucks_todo(True) for dock in range(N_DOCK))/self.n_trucks_in
+                    pt1 = self.pnt_from_coords(w2, h3)
+                    pt2 = self.pnt_from_coords(w1+frac*(w2-w1), h2)
+
+                self.figure = cv.rectangle(self.figure, pt1, pt2, (100,100,255), -1)
+                self.figure = cv.rectangle(self.figure, pt1, pt2, BLACK, 1)
+
 
     def __draw_circulation(self, dock):
         if dock<0 or N_DOCK<=dock: return

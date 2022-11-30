@@ -49,7 +49,7 @@ class BufferLane:
     def get_expected_roll_containers(self):
         """
             return list of expected roll containers as tuples:
-            (expected time of availability, lane, destination, shift)
+            (expected time of availability, lane, roll container)
         """
         return [RollContainerIO((self.store_coord_dict[MAX_LANE_STORE-1][1]-rol.h)/BUFFER_LANE_SPEED, self.lane, rol) for rol in self.store]
 

@@ -66,6 +66,11 @@ class Dock:
         if self.roll_container:
             self.roll_container.draw(floor_plan)
 
+    def get_n_trucks_todo(self, inbound=True):
+        todo  = [] if self.truck is None else [self.truck]
+        todo += self.truck_list
+        return len([t for t in todo if t.inbound==inbound])
+
     def time_step(self, floor_plan):
         if self.truck:
             self.truck.time_step()

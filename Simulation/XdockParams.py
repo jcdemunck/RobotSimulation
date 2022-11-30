@@ -6,8 +6,8 @@ BLACK = (0,0,0)
 
 H_COMPARTMENT  = 0.9
 W_COMPARTMENT  = 0.9
-N_COMP_X       = 4 ## 3
-N_COMP_Y       = 12 ##12
+N_COMP_X       = 3 ## 3
+N_COMP_Y       = 6 ##12
 N_BUFFER_STORE = 3  ##2
 W_BUFFER_STORE = N_COMP_X*W_COMPARTMENT
 H_BUFFER_STORE = N_COMP_Y*H_COMPARTMENT
@@ -43,7 +43,7 @@ W2_ROBOT = 0.9
 H1_ROBOT = 0.7
 H2_ROBOT = 0.4
 
-TIME_STEP_S       =  0.3
+TIME_STEP_S       =  0.25
 ROBOT_SPEED       =  1.0  # (1.2) m/s
 ROBOT_LOAD_TIME   =  5.   # [s]
 ROBOT_UNLOAD_TIME =  5.   # [s]
@@ -57,6 +57,7 @@ TIME_UNLOAD_RC_TRUCK     = 15   # time [s], per roll container to unload a roll 
 TIME_DOCK_INBOUND        = 120  # time [s] the driver needs to put his truck at the dock (before loading/unloading)
 TIME_DOCK_OUTBOUND       =  60  # time [s] the driver needs drive away from the dock (after loading/unloading)
 TIME_DOCK_EXTRA          =  60  # extra time [s] the driver has for (un)loading to wait before the buffer lane is clear/filled
+MIN_DOCK_TIME_GAP        =  30  # minimum time interval [s] between two trucks at a dock
 
 MAX_DOCK_TIME_LOADING    = TIME_DOCK_INBOUND + MAX_TRUCK_LOAD * TIME_LOAD_RC_TRUCK   + TIME_DOCK_EXTRA + TIME_DOCK_OUTBOUND
 MAX_DOCK_TIME_UNLOADING  = TIME_DOCK_INBOUND + MAX_TRUCK_LOAD * TIME_UNLOAD_RC_TRUCK + TIME_DOCK_EXTRA + TIME_DOCK_OUTBOUND

@@ -6,14 +6,13 @@ import bisect as bi
 
 from Truck import Truck
 
-from XdockParams import N_DOCK, MAX_TRUCK_LOAD, MAX_DOCK_TIME_LOADING, MAX_DOCK_TIME_UNLOADING
+from XdockParams import N_DOCK, MAX_TRUCK_LOAD, MAX_DOCK_TIME_LOADING, MAX_DOCK_TIME_UNLOADING, MIN_DOCK_TIME_GAP
 from RollContainer import RollContainer
 from SimulationConfig import PRIO_LIST, DESTINATIONS, destination_color_dict, get_output_dock, destination_from_dock, prio_from_dock
 
 DIR     = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/"
 FILE_IN = "Transport_summary.xlsx"
 
-MIN_TIME_GAP = 30 # minimum time interval [s] between two trucks at a dock
 
 class TruckPlan:
     def __init__(self, simulate, x_dock_name="C_TL"):
@@ -189,17 +188,17 @@ class TruckPlan:
                 if len(group)<=1: continue # OK, no overlap with other intervals
 
                 # t_min, t_max: available time range for each group
-                t_min = -math.inf if g==0             else groups[g-1][-1].departure + MIN_TIME_GAP
-                t_max =  math.inf if g==len(groups)-1 else groups[g+1][ 0].arrival   - MIN_TIME_GAP
+                t_min = -math.inf if g==0             else groups[g-1][-1].departure + MIN_DOCK_TIME_GAP
+                t_max =  math.inf if g==len(groups)-1 else groups[g+1][ 0].arrival - MIN_DOCK_TIME_GAP
 
                 if t_min==-math.inf and t_max==math.inf:
-                    t_req   = sum(t.departure - t.arrival + MIN_TIME_GAP for t in group) - MIN_TIME_GAP
+                    t_req   = sum(t.departure - t.arrival + MIN_DOCK_TIME_GAP for t in group) - MIN_DOCK_TIME_GAP
                     t_begin = (group[0].arrival + group[-1].departure - t_req)/ 2
                     for t in group:
                         t_dock      = t.departure - t.arrival
                         t.arrival   = t_begin
                         t.departure = t_begin + t_dock
-                        t_begin     = t.departure + MIN_TIME_GAP
+                        t_begin     = t.departure + MIN_DOCK_TIME_GAP
 
                 elif t_min==-math.inf:
                     t_end = (t_max + group[-1].departure) / 2
@@ -207,7 +206,7 @@ class TruckPlan:
                         t_dock      = t.departure-t.arrival
                         t.departure = t_end
                         t.arrival   = t_end-t_dock
-                        t_end       = t.arrival - MIN_TIME_GAP
+                        t_end       = t.arrival - MIN_DOCK_TIME_GAP
 
                 elif t_max==math.inf:
                     t_begin = (t_min +group[0].arrival) / 2
@@ -215,27 +214,27 @@ class TruckPlan:
                         t_dock      = t.departure - t.arrival
                         t.arrival   = t_begin
                         t.departure = t_begin + t_dock
-                        t_begin     = t.departure + MIN_TIME_GAP
+                        t_begin     = t.departure + MIN_DOCK_TIME_GAP
                 else:
-                    t_req   = sum(t.departure - t.arrival + MIN_TIME_GAP for t in group) - MIN_TIME_GAP
+                    t_req   = sum(t.departure - t.arrival + MIN_DOCK_TIME_GAP for t in group) - MIN_DOCK_TIME_GAP
                     t_begin = (t_min + t_max - t_req) / 2
                     for t in group:
                         t_dock      = t.departure - t.arrival
                         t.arrival   = t_begin
                         t.departure = t_begin + t_dock
-                        t_begin     = t.departure + MIN_TIME_GAP
+                        t_begin     = t.departure + MIN_DOCK_TIME_GAP
 
                 # shift previous intervals backwards if enlarged spacing causes overlap
-                if g>0 and groups[g-1][-1].departure+MIN_TIME_GAP>group[0].arrival:
-                    shift = groups[g-1][-1].departure+MIN_TIME_GAP-group[0].arrival
+                if g>0 and groups[g-1][-1].departure+MIN_DOCK_TIME_GAP>group[0].arrival:
+                    shift = groups[g-1][-1].departure + MIN_DOCK_TIME_GAP - group[0].arrival
                     for gg in range(g):
                         for t in groups[gg]:
                             t.arrival   -= shift
                             t.departure -= shift
 
                 # shift subsequent intervals forward if enlarged spacing causes overlap
-                if g<len(groups)-1 and group[-1].departure+MIN_TIME_GAP>groups[g+1][0].arrival:
-                    shift = group[-1].departure+MIN_TIME_GAP-groups[g+1][0].arrival
+                if g<len(groups)-1 and group[-1].departure+MIN_DOCK_TIME_GAP>groups[g + 1][0].arrival:
+                    shift = group[-1].departure + MIN_DOCK_TIME_GAP - groups[g + 1][0].arrival
                     for gg in range(g+1, len(groups)):
                         for t in groups[gg]:
                             t.arrival   += shift

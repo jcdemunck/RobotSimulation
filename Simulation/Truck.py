@@ -84,7 +84,7 @@ class Truck:
 
         if len(self.truck_load)>0:
             w    = 3*len(self.truck_load)/MAX_TRUCK_LOAD
-            load = [(w-0.5,0.0), (-0.5,1.7)] if self.inbound else [(1.5-w,0.0), (1.5,1.7)]
+            load = [(w-0.5,0.0), (-0.5,1.7)] if self.inbound else [(-1.5+w,0.0), (-1.5,1.7)]
             load = [(x + qx * s, y + (qy + 0.5) * s) for (qx, qy) in load]
             load = [list(floor_plan.pnt_from_coords(*q)) for q in load]
             cv.rectangle(floor_plan.figure, load[0], load[1], self.color, -1)

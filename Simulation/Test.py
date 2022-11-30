@@ -11,6 +11,8 @@ from TruckPlan import TruckPlan
 from Truck import Truck
 from Robot import BSM
 
+
+
 SIMULATE        = False
 TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
 
@@ -18,6 +20,7 @@ N_VIDEO_FRAME  = -1
 video_out      = None
 im_list        = []
 DIR_VIDEO      = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/Video/"
+
 
 class TruckProcessed(Truck):
     def __init__(self, truck):
@@ -42,15 +45,18 @@ def main():
     cv.waitKey(0)
 
     P = TruckPlan(SIMULATE)
-    truck_list  = P.truck_list
+    truck_list  = [t for t in P.truck_list]
     samp_start  = int(P.start_time/TIME_STEP_S)
     samp_end    = int(P.end_time  /TIME_STEP_S)
+
     fp.time_sec = samp_start*TIME_STEP_S
     fp.set_truck_list(truck_list)
 
     truck_process_list = []
+    draw_step  = 1
+    show_delay = 1
     for sample in range(samp_start, samp_end):
-        time_sec       = sample*TIME_STEP_S
+        time_sec = sample*TIME_STEP_S
 
         if len(truck_list)>0 and time_sec>truck_list[0].arrival:
             truck = truck_list.pop(0)
@@ -104,14 +110,25 @@ def main():
             truck_process_list = [proc for proc in truck_process_list if proc.nrc_not_assigned>0 or not proc.inbound]
 
         fp.time_step()
-        fp.draw()##draw_grid=True)
-        fp.imshow("Test")
-        cv.setWindowTitle("Test", "X-dock")
-        k = cv.waitKey(1)
-        if k&0xFF==ord(' '):
-            cv.waitKey(0)
-        elif k&0xFF==ord('q'):
-            break
+        if not ((sample-samp_start+1)%draw_step):
+            fp.draw()
+            fp.imshow("Test")
+            cv.setWindowTitle("Test", "X-dock")
+            k = cv.waitKey(show_delay)
+            if k&0xFF==ord(' '):
+                cv.waitKey(0)
+            elif k&0xFF==ord('+'):
+                if show_delay==1:
+                    draw_step = int(2*draw_step)
+                else:
+                    show_delay = max(1, int(show_delay/2))
+            elif k&0xFF==ord('-'):
+                if draw_step==1:
+                    show_delay = int(2*show_delay)
+                else:
+                    draw_step = max(1, int(draw_step/2))
+            elif k&0xFF==ord('q'):
+                break
 
         if N_VIDEO_FRAME>0:
             frame = sample-samp_start
