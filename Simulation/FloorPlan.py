@@ -128,6 +128,7 @@ class FloorPlan:
             if buffer_lane.lane_up:
                 roll_containers += buffer_lane.get_expected_roll_containers()
 
+        roll_containers = [rol for rol in roll_containers if not rol.roll_container.scheduled]
         return sorted(roll_containers, key=lambda x: x[0])
 
     def get_best_available_lane(self, dock, output=True, loading=True):
