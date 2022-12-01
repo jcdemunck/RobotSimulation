@@ -1,5 +1,5 @@
-from XdockParams import N_DOCK, N_LANE, N_BUFFER_STORE, N_COMP_X, N_COMP_Y
-
+from XdockParams import N_LANE
+from ModelParameters import ModelParams as M
 
 class Position:
     def __init__(self, floor_plan, dock, buffer_lane=-1, parking=-1, buffer_store=-1, row=-1, col=-1):
@@ -13,7 +13,7 @@ class Position:
         self.h            =  0.
         self.pos_type     = "general"
 
-        if dock<0 or N_DOCK<=dock:
+        if dock<0 or M.N_DOCK<=dock:
             print("ERROR: Position.__init__(). dock = ", dock)
             return
         self.dock = dock
@@ -35,10 +35,10 @@ class Position:
             self.pos_type  = "parking"
 
         elif buffer_store>=0:
-            if buffer_store>=N_BUFFER_STORE:
+            if buffer_store>=M.N_BUFFER_STORE:
                 print("ERROR: Position.__init__(). buffer_store = ", buffer_store)
                 return
-            if row<0 or N_COMP_Y<=row or col<0 or N_COMP_X<=col:
+            if row<0 or M.N_BUFFER_ROW<=row or col<0 or M.N_BUFFER_COL<=col:
                 print("ERROR: Position.__init__(). row, col = ", row, col)
                 return
 

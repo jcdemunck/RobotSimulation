@@ -7,10 +7,13 @@ import os
 import sys
 import inspect
 
-from XdockParams import H_FLOOR, W_FLOOR, N_DOCK, W_DOCK, N_LANE, MAX_LANE_STORE, N_BUFFER_STORE, N_COMP_X, N_COMP_Y, H_LANE, \
+from XdockParams import W_DOCK, N_LANE, H_DOCK_LEGENDS, \
                         TIME_STEP_S, \
                         BLACK, \
                         get_distance_city_block, get_distance
+
+from  ModelParameters import ModelParams as M
+from  ModelParameters import get_model_params, get_log_filename
 
 from Robot import Robot
 from Dock import Dock
@@ -26,14 +29,14 @@ sys.path.insert(0, parentdir+"\\dks-ketenrekenmodel\\src\\krm\\core")
 import GraphTools as GT
 
 class FloorPlan:
-    def __init__(self, n_robots=8):
+    def __init__(self):
         border_w          = 70
         border_h          = 100
         self.fig_width    = 1000
-        self.fig_height   = border_h + int((self.fig_width-border_h) * H_FLOOR/W_FLOOR)
+        self.fig_height   = border_h + int((self.fig_width-border_h) * M.H_FLOOR/M.W_FLOOR)
         if self.fig_height>800:
             self.fig_height = 800
-            self.fig_width  = border_h + int((self.fig_height - border_h) * W_FLOOR/H_FLOOR)
+            self.fig_width  = border_h + int((self.fig_height - border_h) * M.W_FLOOR/M.H_FLOOR)
 
         self.figure       = np.full((self.fig_height, self.fig_width, 3), 255, np.uint8)
 
@@ -44,22 +47,22 @@ class FloorPlan:
         self.parkings      = dict()
         self.docks         = dict()
         pos_list           = []
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             self.docks[dock]    = Dock(dock)
             self.parkings[dock] = Parking(dock)
             pos_list           += self.parkings[dock].get_park_positions()
             for lane in range(N_LANE):
                 self.buffer_lanes[dock, lane]  = BufferLane(dock, lane)
                 pos_list                        += [self.buffer_lanes[dock, lane].get_grid_coords()]
-            for store in range(N_BUFFER_STORE):
+            for store in range(M.N_BUFFER_STORE):
                 self.buffer_stores[dock, store] = BufferStore(dock, store)
                 pos_list                        += self.buffer_stores[dock, store].get_store_positions()
         self.grid_graph = self.__create_grid()
         self.path_table = GT.PathTable(self.grid_graph, pos_list, get_distance_city_block)
 
         self.robots = []
-        for r in range(n_robots):
-            parking_pos = Position(self, dock=r%N_DOCK, parking=r//N_DOCK)
+        for r in range(M.N_ROBOT):
+            parking_pos = Position(self, dock=r%M.N_DOCK, parking=r//M.N_DOCK)
             if parking_pos is None:
                 break
             color = None if r!=10 else (0, 0, 255)
@@ -71,7 +74,7 @@ class FloorPlan:
         self.n_trucks_out = 0
 
     def time_step(self):
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             self.docks[dock].time_step(self)
 
             # time step each lane
@@ -105,12 +108,12 @@ class FloorPlan:
         self.n_trucks_in  = len([t for t in truck_list if t.inbound])
         self.n_trucks_out = len([t for t in truck_list if not t.inbound])
 
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             self.docks[dock].set_truck_list(truck_list)
 
     def get_next_arrival(self):
         t_next = math.inf
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             t_arrive = self.docks[dock].truck_list[0].arrival
             t_next = min(t_next, t_arrive)
 
@@ -120,6 +123,14 @@ class FloorPlan:
         for rob in self.robots:
             if not rob.is_idle(): return False
         return True
+
+    def get_nrc_incoming(self, dock):
+        nrc = 0
+        for lane in range(N_LANE):
+            buffer_lane = self.buffer_lanes[dock, lane]
+            if buffer_lane.lane_up:
+                nrc += buffer_lane.get_n_stored()
+        return nrc
 
     def get_incoming_roll_containers(self, dock):
         roll_containers = []
@@ -133,12 +144,12 @@ class FloorPlan:
 
     def get_best_available_lane(self, dock, output=True, loading=True):
         if loading:
-            n_min    =  MAX_LANE_STORE+1
+            n_min    =  M.MAX_LANE_STORE+1
             lane_min = -1
             for lane in range(N_LANE):
                 buffer_lane = self.buffer_lanes[dock, lane]
                 if (buffer_lane.lane_up and output) or (not buffer_lane.lane_up and not output): continue
-                if buffer_lane.n_store_reserved>=MAX_LANE_STORE: continue
+                if buffer_lane.n_store_reserved>=M.MAX_LANE_STORE: continue
                 if buffer_lane.n_store_reserved<n_min:
                     lane_min = lane
                     n_min    = buffer_lane.n_store_reserved
@@ -161,13 +172,13 @@ class FloorPlan:
         if draw_grid:
             self.draw_grid()
         self.__draw_legends()
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             if dock>0:
                 self.figure = cv.line(self.figure, self.pnt_from_coords(dock * W_DOCK, 0.),
-                                                   self.pnt_from_coords(dock * W_DOCK, H_FLOOR), BLACK, 1)
+                                                   self.pnt_from_coords(dock * W_DOCK, M.H_FLOOR), BLACK, 1)
             if draw_circulation:
                 self.__draw_circulation(dock)
-            for store in range(N_BUFFER_STORE):
+            for store in range(M.N_BUFFER_STORE):
                 self.buffer_stores[dock, store].draw(self)
 
             self.docks[dock].draw(self)
@@ -179,15 +190,15 @@ class FloorPlan:
             rob.draw(self)
 
     def pnt_from_coords(self, w, h):
-        h = H_FLOOR - h
-        x = int(self.top_left[0] + (w / W_FLOOR) * (self.bottom_right[0] - self.top_left[0]))
-        y = int(self.top_left[1] + (h / H_FLOOR) * (self.bottom_right[1] - self.top_left[1]))
+        h = M.H_FLOOR - h
+        x = int(self.top_left[0] + (w / M.W_FLOOR) * (self.bottom_right[0] - self.top_left[0]))
+        y = int(self.top_left[1] + (h / M.H_FLOOR) * (self.bottom_right[1] - self.top_left[1]))
         return x, y
 
     def __create_grid(self):
         digraph = GT.DiGraph()
 
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             park      = self.parkings[dock]
             p_park_0  = park.get_grid_coords(corner=0) # lower left
             p_park_1  = park.get_grid_coords(corner=1) # lower right
@@ -234,18 +245,18 @@ class FloorPlan:
             digraph.add_edge(p_park_2, p_right_most_buffer_coords) # rightmost up
 
             # edges around each buffer store
-            for store in range(N_BUFFER_STORE):
+            for store in range(M.N_BUFFER_STORE):
                 buffer = self.buffer_stores[dock, store]
                 w2, h2 = buffer.get_grid_coords(corner=2) # upper right
-                q      = (w2, buffer.get_grid_coords(row=0, col=N_COMP_X-1)[1])
+                q      = (w2, buffer.get_grid_coords(row=0, col=M.N_BUFFER_COL - 1)[1])
 
                 # below buffer
                 digraph.add_edge(buffer.get_grid_coords(corner=0), buffer.get_grid_coords(corner=1))
                 # right of buffer, lower part
                 digraph.add_edge(buffer.get_grid_coords(corner=1), q)
 
-                for row in range(N_COMP_Y):
-                    p_new = buffer.get_grid_coords(row=row, col=N_COMP_X-1)
+                for row in range(M.N_BUFFER_ROW):
+                    p_new = buffer.get_grid_coords(row=row, col=M.N_BUFFER_COL - 1)
                     q_new = (w2,p_new[1])
                     digraph.add_edge(q_new, p_new) # left and right to first store
                     digraph.add_edge(p_new, q_new)
@@ -253,7 +264,7 @@ class FloorPlan:
                         digraph.add_edge(q, q_new) # step up
                         q = q_new
 
-                    for col in range(N_COMP_X-2, -1, -1):
+                    for col in range(M.N_BUFFER_COL - 2, -1, -1):
                         p_old = buffer.get_grid_coords(row=row, col=col)
                         digraph.add_edge(p_old, p_new)     # left and right to store at column col
                         digraph.add_edge(p_new, p_old)
@@ -273,13 +284,13 @@ class FloorPlan:
 
 
         # connect dock grids
-        for dock in range(N_DOCK-1):
+        for dock in range(M.N_DOCK-1):
             # connect parkings
             digraph.add_edge(self.parkings[dock  ].get_grid_coords(corner=1), self.parkings[dock+1].get_grid_coords(corner=0))
             digraph.add_edge(self.parkings[dock+1].get_grid_coords(corner=3), self.parkings[dock  ].get_grid_coords(corner=2))
 
             # connect buffer stores
-            for store in range(N_BUFFER_STORE):
+            for store in range(M.N_BUFFER_STORE):
                 buffer  = self.buffer_stores[(dock  , store)]
                 buffer1 = self.buffer_stores[(dock+1, store)]
                 digraph.add_edge(buffer .get_grid_coords(corner=1), buffer1.get_grid_coords(corner=0))
@@ -307,7 +318,7 @@ class FloorPlan:
             return self.parkings[dock].get_grid_coords(park=parking)
 
         if store>=0:
-            if store>=N_BUFFER_STORE: return
+            if store>=M.N_BUFFER_STORE: return
             return self.buffer_stores[dock, store].get_grid_coords(row=row, col=col)
 
     def get_shortest_path(self, pos1, pos2):
@@ -323,7 +334,7 @@ class FloorPlan:
 
     def __draw_legends(self):
         # Arrow to denote width of one dock
-        h   = 1.01 * H_FLOOR
+        h   = 1.01 * M.H_FLOOR
         pt1 = self.pnt_from_coords(0.      , h)
         pt2 = self.pnt_from_coords(W_DOCK/2, h)
         pt3 = self.pnt_from_coords(W_DOCK  , h)
@@ -339,39 +350,39 @@ class FloorPlan:
         self.figure = cv.putText(self.figure, text, pt, font, 0.4, BLACK)
 
         # Arrow denoting height of cross dock floor
-        w   = 1.01 * W_FLOOR
+        w   = 1.01 * M.W_FLOOR
         pt1 = self.pnt_from_coords(w, 0.       )
-        pt2 = self.pnt_from_coords(w, H_FLOOR/2)
-        pt3 = self.pnt_from_coords(w, H_FLOOR  )
+        pt2 = self.pnt_from_coords(w, M.H_FLOOR/2)
+        pt3 = self.pnt_from_coords(w, M.H_FLOOR  )
 
         l = get_distance(pt1, pt2)
         self.figure = cv.arrowedLine(self.figure, pt2, pt1, (0, 0, 255), 2, tipLength=5 / l if l>0. else 0.)
         self.figure = cv.arrowedLine(self.figure, pt2, pt3, (0, 0, 255), 2, tipLength=5 / l if l>0. else 0.)
 
         # print height
-        text = f"{H_FLOOR:5.1f} m"
+        text = f"{M.H_FLOOR:5.1f} m"
         font = cv.FONT_HERSHEY_SIMPLEX
-        pt   = self.pnt_from_coords(0.995*W_FLOOR, H_FLOOR/2)
+        pt   = self.pnt_from_coords(0.995*M.W_FLOOR, M.H_FLOOR/2)
         self.figure = cv.putText(self.figure, text, pt, font, 0.4, BLACK)
 
         header_time = f"t={(int(self.time_sec) // 3600 ) % 24:02d}:{(int(self.time_sec) // 60) % 60:02d}:{int(self.time_sec) % 60:02d}"
-        pt = self.pnt_from_coords((N_DOCK-1.1)*W_DOCK, 1.01 * h)
+        pt = self.pnt_from_coords((M.N_DOCK-1.1)*W_DOCK, 1.01 * h)
         self.figure = cv.putText(self.figure, header_time, pt, font, 0.6, BLACK)
 
         if self.n_trucks_in>0 and self.n_trucks_out>0:
-            w1 = W_FLOOR
-            w2 = W_FLOOR + 0.7*W_DOCK
-            h1 = -H_LANE / 8
+            w1 = M.W_FLOOR
+            w2 = M.W_FLOOR + 0.7*W_DOCK
+            h1 = H_DOCK_LEGENDS
             h2 = 0.
             h3 = (h1+h2)/2
 
             for out in [False, True]:
                 if out:
-                    frac = sum(self.docks[dock].get_n_trucks_todo(False) for dock in range(N_DOCK))/self.n_trucks_out
+                    frac = sum(self.docks[dock].get_n_trucks_todo(False) for dock in range(M.N_DOCK))/self.n_trucks_out
                     pt1  = self.pnt_from_coords(w1, h1)
                     pt2  = self.pnt_from_coords(w2-frac*(w2-w1), h3)
                 else:
-                    frac = sum(self.docks[dock].get_n_trucks_todo(True) for dock in range(N_DOCK))/self.n_trucks_in
+                    frac = sum(self.docks[dock].get_n_trucks_todo(True) for dock in range(M.N_DOCK))/self.n_trucks_in
                     pt1 = self.pnt_from_coords(w2, h3)
                     pt2 = self.pnt_from_coords(w1+frac*(w2-w1), h2)
 
@@ -380,15 +391,39 @@ class FloorPlan:
 
 
     def __draw_circulation(self, dock):
-        if dock<0 or N_DOCK<=dock: return
+        if dock<0 or M.N_DOCK<=dock: return
 
          # around parking buffer
         self.parkings[dock].draw_circulation(self)
 
         # around stores
-        for buffer in range(N_BUFFER_STORE):
-            for store in range(N_BUFFER_STORE):
-                self.buffer_stores[dock, store].draw_circulation(self)
+        for store in range(M.N_BUFFER_STORE):
+            self.buffer_stores[dock, store].draw_circulation(self)
+
+    def get_incompletely_unloaded_trucks(self):
+        return [t for dock in range(M.N_DOCK) for t in self.docks[dock].incomplete_unloaded]
+
+    def get_n_roll_containers_in_store(self):
+        return sum(self.buffer_stores[dock, buffer].get_n_stored() for buffer in range(M.N_BUFFER_STORE) for dock in range(M.N_DOCK))
+
+    def get_n_roll_containers_in_lanes(self):
+        return sum(self.buffer_lanes[dock, lane].get_n_stored() for lane in range(N_LANE) for dock in range(M.N_DOCK))
+
+    def log_results(self):
+        text = get_model_params()
+        text += "\n\n\nResults:\n"
+        t_list = self.get_incompletely_unloaded_trucks()
+        text += f"NRC_in_buffer_store = {self.get_n_roll_containers_in_store():d} \n" +\
+                f"NRC_in_buffer_lane  = {self.get_n_roll_containers_in_lanes():d} \n" +\
+                f"NRC_not_unloaded    = {sum(len(t.truck_load) for t in t_list):d} \n"
+
+        text += "Unloaded trucks: \n"
+        if len(t_list)>0:
+            text += t_list[0]._get_log_line(True)+'\n'
+            for t in t_list:
+                text += t._get_log_line(False)+'\n'
+        with open(get_log_filename("Results"), "w") as fp:
+            fp.write(text)
 
     def imshow(self, name):
         cv.imshow(name, self.figure)

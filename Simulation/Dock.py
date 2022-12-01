@@ -1,19 +1,19 @@
 import cv2 as cv
 
-from XdockParams import N_DOCK, W_DOCK, H_LANE,  \
+from XdockParams import W_DOCK, H_DOCK_LEGENDS,  \
                         WHITE, TIME_LOAD_BUFFER_LANE, TIME_STEP_S,\
                         round_coords
-
+from ModelParameters import ModelParams as M
 
 class Dock:
     def __init__(self, dock):
-        if dock<0 or N_DOCK<=dock: return
+        if dock<0 or M.N_DOCK<=dock: return
 
         self.dock = dock
         self.name = f"dock {self.dock:d}"
         self.w1   = (dock + 0.05) * W_DOCK
         self.w2   = (dock + 0.95) * W_DOCK
-        self.h1   = -H_LANE / 8
+        self.h1   = H_DOCK_LEGENDS
         self.h2   = 0.
 
         self.w1, self.h1 = round_coords((self.w1, self.h1))
@@ -23,8 +23,9 @@ class Dock:
         self.truck      = None
         self.color      = (200,0,0)
 
-        self.roll_container = None
-        self.rc_dead_time   = TIME_LOAD_BUFFER_LANE
+        self.roll_container      = None
+        self.rc_dead_time        = TIME_LOAD_BUFFER_LANE
+        self.incomplete_unloaded = []
 
     def set_color(self, col):
         self.color = col
@@ -90,6 +91,8 @@ class Dock:
 
         if self.truck.can_be_undocked():
             self.truck.undock()
+            if self.truck.inbound and len(self.truck.truck_load):
+                self.incomplete_unloaded.append(self.truck)
             self.truck = None
             return
 

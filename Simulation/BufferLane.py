@@ -2,17 +2,19 @@ import cv2 as cv
 from collections import namedtuple
 
 from XdockParams import round_coords, \
-                      N_DOCK, W_DOCK, H_FRONT, \
-                      W_LANE, H_LANE, N_LANE, H_LANE_STORE, MAX_LANE_STORE, BUFFER_LANE_SPEED, TIME_LOAD_BUFFER_LANE, \
+                      W_DOCK, H_FRONT, \
+                      W_LANE, N_LANE, H_LANE_STORE, BUFFER_LANE_SPEED, TIME_LOAD_BUFFER_LANE, \
                       TIME_STEP_S, \
                       BLACK, WHITE
+
+from ModelParameters import ModelParams as M
 
 RollContainerIO = namedtuple("rc_in_out", "eta lane roll_container")
 
 class BufferLane:
     def __init__(self, dock, lane):
-        if dock<0 or N_DOCK<=dock: return
-        if lane<0 or N_LANE<=lane: return
+        if dock<0 or M.N_DOCK<=dock: return
+        if lane<0 or   N_LANE<=lane: return
 
         self.lane_up = lane>=N_LANE/2
         self.dock    = dock
@@ -21,17 +23,17 @@ class BufferLane:
         self.w1 = (W_DOCK/N_LANE-W_LANE)/2 + self.lane*W_DOCK/N_LANE + dock * W_DOCK
         self.w2 = self.w1 + W_LANE
         self.h1 = H_FRONT
-        self.h2 = self.h1 + H_LANE
+        self.h2 = self.h1 + M.H_LANE
 
         self.dead_time_up   = 0.
         self.dead_time_down = 0.
         self.store          = []
         mid  = (self.w1 + self.w2) / 2
-        step = (self.h2 - self.h1 - H_LANE_STORE) / (MAX_LANE_STORE - 1)
+        step = (self.h2 - self.h1 - H_LANE_STORE) / (M.MAX_LANE_STORE - 1)
         if self.lane_up:
-            self.store_coord_dict = dict([(r, round_coords((mid, self.h1+H_LANE_STORE/2 + r*step))) for r in range(MAX_LANE_STORE)])
+            self.store_coord_dict = dict([(r, round_coords((mid, self.h1+H_LANE_STORE/2 + r*step))) for r in range(M.MAX_LANE_STORE)])
         else:
-            self.store_coord_dict = dict([(r, round_coords((mid, self.h2-H_LANE_STORE/2 - r*step))) for r in range(MAX_LANE_STORE)])
+            self.store_coord_dict = dict([(r, round_coords((mid, self.h2-H_LANE_STORE/2 - r*step))) for r in range(M.MAX_LANE_STORE)])
 
         self.w1, self.h1 = round_coords((self.w1, self.h1))
         self.w2, self.h2 = round_coords((self.w2, self.h2))
@@ -51,29 +53,29 @@ class BufferLane:
             return list of expected roll containers as tuples:
             (expected time of availability, lane, roll container)
         """
-        return [RollContainerIO((self.store_coord_dict[MAX_LANE_STORE-1][1]-rol.h)/BUFFER_LANE_SPEED, self.lane, rol) for rol in self.store]
+        return [RollContainerIO((self.store_coord_dict[M.MAX_LANE_STORE-1][1]-rol.h)/BUFFER_LANE_SPEED, self.lane, rol) for rol in self.store]
 
     def time_step(self):
         move = BUFFER_LANE_SPEED * TIME_STEP_S
         if self.lane_up:
             for r, rol in enumerate(self.store):
-                rol.h = min(rol.h+move, self.store_coord_dict[MAX_LANE_STORE-1-r][1])
+                rol.h = min(rol.h+move, self.store_coord_dict[M.MAX_LANE_STORE-1-r][1])
         else:
             for r, rol in enumerate(self.store):
-                rol.h = max(rol.h-move, self.store_coord_dict[MAX_LANE_STORE-1-r][1])
+                rol.h = max(rol.h-move, self.store_coord_dict[M.MAX_LANE_STORE-1-r][1])
 
         self.dead_time_up   += TIME_STEP_S
         self.dead_time_down += TIME_STEP_S
 
     def can_be_loaded(self):
-        return len(self.store)<MAX_LANE_STORE and self.dead_time_up>=0.
+        return len(self.store)<M.MAX_LANE_STORE and self.dead_time_up>=0.
 
     def can_be_unloaded(self):
         return len(self.store)>0 and self.store[0].h<=self.h1+H_LANE_STORE/2 and self.dead_time_down>=0.
 
     def get_grid_coords(self):
         # return top store
-        if self.lane_up: return self.store_coord_dict[MAX_LANE_STORE-1]
+        if self.lane_up: return self.store_coord_dict[M.MAX_LANE_STORE-1]
         else:            return self.store_coord_dict[0]
 
     def draw(self, floor_plan):
@@ -102,7 +104,7 @@ class BufferLane:
         self.n_store_reserved += 1
 
     def store_roll_container(self, rol):
-        if len(self.store)>=MAX_LANE_STORE: return
+        if len(self.store)>=M.MAX_LANE_STORE: return
 
         rol.w, rol.h = self.store_coord_dict[0]
         rol.o = 1 if self.lane_up else 3

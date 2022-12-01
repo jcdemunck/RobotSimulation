@@ -6,7 +6,8 @@ import bisect as bi
 
 from Truck import Truck
 
-from XdockParams import N_DOCK, MAX_TRUCK_LOAD, MAX_DOCK_TIME_LOADING, MAX_DOCK_TIME_UNLOADING, MIN_DOCK_TIME_GAP
+from XdockParams import MAX_TRUCK_LOAD, MAX_DOCK_TIME_LOADING, MAX_DOCK_TIME_UNLOADING, MIN_DOCK_TIME_GAP
+from ModelParameters import ModelParams as M
 from RollContainer import RollContainer
 from SimulationConfig import PRIO_LIST, DESTINATIONS, destination_color_dict, get_output_dock, destination_from_dock, prio_from_dock
 
@@ -139,7 +140,7 @@ class TruckPlan:
             # find dock with smallest time gap
             gap   = math.inf
             d_min = -1
-            for d in range(N_DOCK):
+            for d in range(M.N_DOCK):
                 intervals = [(triple[2].arrival, triple[2].departure) for triple in dock_dict[d]]
                 if len(intervals)==0:  return d
 
@@ -245,7 +246,7 @@ class TruckPlan:
 
         # Plan departing trucks (that need specific dock)
         # Each value of dock_dict contains a list of ordered triples: (arrival, unique integer, truck)
-        dock_dict = dict([(d, []) for d in range(N_DOCK)])
+        dock_dict = dict([(d, []) for d in range(M.N_DOCK)])
         for truck in self.truck_list:
             if truck.inbound: continue
 
@@ -253,7 +254,7 @@ class TruckPlan:
             bi.insort(dock_dict[truck.dock], (truck.arrival, len(dock_dict[truck.dock]), truck))
 
         # test outbound planning
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             trucks = [t for (a,d,t) in dock_dict[dock]]
             if len(trucks)<=0: continue
             print(destination_from_dock(dock), prio_from_dock(dock), "\t", "Range before correction: ",trucks[0].arrival/3600,'-',trucks[-1].departure/3600)
@@ -278,7 +279,7 @@ class TruckPlan:
         self.test_planning()
 
     def test_planning(self):
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             trucks = [t for t in self.truck_list if t.dock==dock]
             print("dock = ", dock, destination_from_dock(dock), prio_from_dock(dock))
 

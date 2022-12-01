@@ -2,10 +2,12 @@ from collections import defaultdict, Counter
 import cv2 as cv
 
 
-from XdockParams import TIME_STEP_S, W_FLOOR, H_FLOOR, \
+from XdockParams import TIME_STEP_S,  \
                         ROBOT_SPEED, ROBOT_LOAD_TIME, ROBOT_UNLOAD_TIME, W1_ROBOT, W2_ROBOT, H1_ROBOT, H2_ROBOT, \
-                        LOG_DIR, LOG_INTERVAL_ROBOT,\
+                        LOG_INTERVAL_ROBOT,\
                         get_orientation, get_distance_city_block, get_path_len
+from ModelParameters import ModelParams as M
+from ModelParameters import get_log_filename
 
 from BufferStoreManager import BufferStoreManager
 
@@ -162,7 +164,7 @@ class RobotTask:
         if self.finished:
             return 0.
         if self.task_type[0:4]=="goto":
-            return W_FLOOR/(2*ROBOT_SPEED)
+            return M.W_FLOOR/(2*ROBOT_SPEED)
         if self.task_type=="wait":
             return self.wait
         return TIME_STEP_S
@@ -177,34 +179,41 @@ class RobotLogger:
         self.samp      = 0
         self.task_dict = dict()               # current number of tasks of each robot
         self.rob_dict  = defaultdict(Counter) # number of times each task type is executed, for each robot
-        self.log_file  = LOG_DIR + "Robots.log"
+        self.log_file  = ""
 
     def __get__(self, obj, objtype):
         return partial(self.__call__, obj)
 
     def __call__(self, rob, *args, **kwargs):
+        # Write log file header
+        if self.log_file=="":
+            self.log_file = get_log_filename("Robots")
+            with open(self.log_file, "w") as fp:
+                fp.write("ID\ttime\t" + '\t'.join(RobotTask.log_tasks) + "\tn_tasks\n")
+
+        # Add current status to log file
         if rob.ID==0:
             if self.samp==0:
-                if self.time==0.:
-                    with open(self.log_file, "w") as fp:
-                        fp.write("time\tID\t"+'\t'.join(RobotTask.log_tasks)+"\tn_tasks\n")
-
                 with open(self.log_file, "a") as fp:
                     for id in sorted(self.rob_dict):
-                        times = [self.rob_dict[id][ta] * TIME_STEP_S for ta in RobotTask.log_tasks]
+                        times = [self.rob_dict[id][ta] * TIME_STEP_S/3600. for ta in RobotTask.log_tasks]
                         if id>=0:
                             n_tasks = self.task_dict[rob.ID]
-                            line    = f"{self.time:8.1f}\t{str(id) :s}\t" + '\t'.join(f"{t:8.1f}" for t in times) + '\t'+str(n_tasks)+'\n'
+                            line    = f"{str(id) :s}\t{self.time/3600.:9.3f}\t" + '\t'.join(f"{t:8.1f}" for t in times) + '\t'+str(n_tasks)+'\n'
                         else:
+                            n_rob   = len(args[0].robots)
+                            times   = [t/n_rob for t in times]  # Compute mean time
                             n_tasks = sum(v for v in self.task_dict.values())
-                            line    = f"{self.time:8.1f}\ttotal\t" + '\t'.join(f"{t:8.1f}" for t in times) + '\t'+str(n_tasks)+'\n'
+                            line    = f"total\t{self.time/3600.:9.3f}\t" + '\t'.join(f"{t:8.1f}" for t in times) + '\t'+str(n_tasks)+'\n'
                         fp.write(line)
 
+            # Timings
             self.time += TIME_STEP_S
             self.samp += 1
             if self.samp*TIME_STEP_S >= LOG_INTERVAL_ROBOT:
                 self.samp = 0
 
+        # Keep track of stats
         self.task_dict[rob.ID] = len(rob.task_list)
         task = "park" if len(rob.task_list)==0 else rob.task_list[0].task_type
         self.rob_dict[rob.ID][task] += 1
@@ -307,7 +316,7 @@ class Robot:
                           RobotTask(wait=ROBOT_LOAD_TIME, load_lane=pos_pickup.get_store_object(floor_plan)),
                           RobotTask(find_destination=True)]
 
-    def append_process_incoming(self, floor_plan, pos_pickup):
+    def append_process_incoming(self, floor_plan, pos_pickup, prepend=False):
         # new, incomplete task (storage destination not yet known)
         new_tasks = [RobotTask(begin=True),
                      RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
@@ -321,16 +330,24 @@ class Robot:
         # find last finished task
         else:
             end_list = -1
-            if n_tasks>2 and self.task_list[-2].task_type=="goto_parking":
-                for t,task in enumerate(reversed(self.task_list[:-2])):
+            if prepend: #put new task at the beginning of task list
+                end_list = -1
+                for t, task in enumerate(self.task_list):
                     if task.task_type=="end_task" or task.task_type=="find_destination":
-                        end_list = n_tasks-2-t
+                        end_list = t + 1
                         break
-            else:
-                for t,task in enumerate(reversed(self.task_list)):
-                    if task.task_type=="end_task" or task.task_type=="find_destination":
-                        end_list = n_tasks-t
-                        break
+
+            else: # put new task at the end of list
+                if n_tasks>2 and self.task_list[-2].task_type=="goto_parking":
+                    for t,task in enumerate(reversed(self.task_list[:-2])):
+                        if task.task_type=="end_task" or task.task_type=="find_destination":
+                            end_list = n_tasks-2-t
+                            break
+                else:
+                    for t,task in enumerate(reversed(self.task_list)):
+                        if task.task_type=="end_task" or task.task_type=="find_destination":
+                            end_list = n_tasks-t
+                            break
 
             # insert new tasks
             self.task_list = self.task_list[:end_list]  + new_tasks + self.task_list[end_list:]
@@ -426,8 +443,8 @@ class Robot:
         elif self.o==2:   self.w -= step
         elif self.o==3:   self.h -= step
 
-        self.w = max(0., min(W_FLOOR, self.w))
-        self.h = max(0., min(H_FLOOR, self.h))
+        self.w = max(0., min(M.W_FLOOR, self.w))
+        self.h = max(0., min(M.H_FLOOR, self.h))
         if not self.rol is None:
             self.rol.w = self.w
             self.rol.h = self.h

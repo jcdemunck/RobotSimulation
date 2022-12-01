@@ -5,25 +5,31 @@ from pathlib import Path
 from FloorPlan import FloorPlan
 from Position import Position
 
-from XdockParams import TIME_STEP_S, N_DOCK, TIME_LOAD_BUFFER_LANE
+from XdockParams import TIME_STEP_S, TIME_LOAD_BUFFER_LANE
 from SimulationConfig import set_dock_names_colors, get_output_dock
 from TruckPlan import TruckPlan
-from Truck import Truck
 from Robot import BSM
 
+from ModelParameters import ModelParams
+M = ModelParams()
+M.set_n_buffer_store(3)
+M.set_n_buffer_row_col(8,3)
+M.set_n_robot(32)
+M.set_max_buffer_lane_store(12)
 
 
 SIMULATE        = False
-TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
 
-N_VIDEO_FRAME  = -1
-video_out      = None
-im_list        = []
-DIR_VIDEO      = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/Video/"
+N_VIDEO_FRAME   = -1
+video_out       = None
+im_list         = []
+DIR_VIDEO       = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/Video/"
+
+TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
 
 
 def main():
-    fp = FloorPlan(2*N_DOCK)
+    fp = FloorPlan()
     set_dock_names_colors(fp)
 
     if N_VIDEO_FRAME>0:
@@ -48,13 +54,13 @@ def main():
     draw_step  = 1
     show_delay = 1
     for sample in range(samp_start, samp_end):
-        time_sec = sample*TIME_STEP_S
 
-        for dock in range(N_DOCK):
+        for dock in range(M.N_DOCK):
             rc_incoming = fp.get_incoming_roll_containers(dock)
             truck       = fp.docks[dock].truck
 
             if len(rc_incoming)>0:
+                priority = 0 if truck is None or not truck.inbound else fp.get_nrc_incoming(dock)
 
                 # assign robots to incoming roll containers, until all roll containers are assigned to robot
                 rob_list = sorted(fp.robots, key=lambda rob: rob.get_task_list_length())
@@ -66,11 +72,13 @@ def main():
                         wait  = max(0., roll_io.eta + n*TIME_LOAD_TOTAL -robot.get_time_to_pos(fp, pos_pickup) )
                         robot.wait_process_incoming(fp, wait, pos_pickup)
                     else:
-                        robot.append_process_incoming(fp, pos_pickup)
+                        robot.append_process_incoming(fp, pos_pickup, priority>3)
 
                     roll_io.roll_container.scheduled = True
 
             if truck is None: continue
+
+            # Process outbound trucks
             if not truck.inbound:
                 buffer_list = BSM.get_buffer_list(truck.destination, truck.prios[0])
                 buffer_list = [(d, b) for (d,b) in buffer_list if not fp.buffer_stores[d, b].is_store_unused()]
@@ -96,7 +104,7 @@ def main():
                         lane = fp.get_best_available_lane(dock_dest, output=True)
 
         fp.time_step()
-        if not ((sample-samp_start+1)%draw_step):
+        if not ((sample-samp_start+1)%draw_step) or sample+1==samp_end:
             fp.draw()
             fp.imshow("Test")
             cv.setWindowTitle("Test", "X-dock")
@@ -127,6 +135,8 @@ def main():
                 Path(DIR_VIDEO+"test0.avi").unlink(missing_ok=True)
                 Path("test0.avi").rename(DIR_VIDEO+"test0.avi")
                 break
+
+    fp.log_results()
     cv.waitKey(0)
     cv.destroyAllWindows()
 

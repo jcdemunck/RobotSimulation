@@ -2,16 +2,15 @@ import cv2 as cv
 import numpy as np
 
 from XdockParams import MAX_TRUCK_LOAD, TIME_DOCK_INBOUND, TIME_DOCK_OUTBOUND, TIME_LOAD_RC_TRUCK, TIME_UNLOAD_RC_TRUCK, TIME_STEP_S,\
-                        BLACK, LOG_DIR
-
+                        BLACK
+from ModelParameters import get_log_filename
 
 from functools import update_wrapper, partial
 class TruckLogger:
     def __init__(self, func):
         update_wrapper(self, func)
         self.func      = func
-        self.log_file  = LOG_DIR + "Trucks.log"
-        self.init      = False
+        self.log_file  = ""
 
     def __get__(self, obj, objtype):
         return partial(self.__call__, obj)
@@ -19,14 +18,14 @@ class TruckLogger:
     def __call__(self, truck, *args, **kwargs):
         result = self.func(truck, *args, **kwargs)
 
-        if not self.init:
-            self.init=True
+        if self.log_file=="":
+            self.log_file = get_log_filename("Trucks")
             dummy = Truck(0., 0., (0, 0, 0))
             with open(self.log_file, "w") as fp:
-                fp.write(dummy._get_log_line(header=True))
+                fp.write(dummy._get_log_line(header=True) + '\n')
 
         with open(self.log_file, "a") as fp:
-            fp.write(truck._get_log_line())
+            fp.write(truck._get_log_line() + '\n')
 
         return result
 
@@ -55,8 +54,8 @@ class Truck:
         self.__dead_time_rc = 0.
 
     def __str__(self):
-        text  = f"docked = {str(self.__docked):s}\n"
-        text += f"ID = {str(self.ID):s}\n"
+        text  = f"ID = {str(self.ID):s}\n"
+        text += f"docked = {str(self.__docked):s}\n"
         text += f"arrival = {self.arrival/3600:7.2f}\n"
         text += f"departure = {self.departure/3600:7.2f}\n"
         text += f"inbound = {str(self.inbound):s}\n"
@@ -68,7 +67,7 @@ class Truck:
 
     def _get_log_line(self, header=False):
         h = 0 if header else 1
-        return "\t".join(kw.split('=')[h].strip() for kw in str(self).split("\n") if len(kw)>1) + '\n'
+        return "\t".join(kw.split('=')[h].strip() for kw in str(self).split("\n") if len(kw)>1)
 
     def draw(self, floor_plan, dock):
         s = 0.2*(dock.w2-dock.w1)

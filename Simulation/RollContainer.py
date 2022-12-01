@@ -1,8 +1,6 @@
 import cv2 as cv
 from XdockParams import W_ROLL_CONTAINER, H_ROLL_CONTAINER, BLACK
 
-
-
 class RollContainer:
     lastID = 0
     def __init__(self, w, h, orientation, destination, prio, color):

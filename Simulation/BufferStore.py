@@ -1,8 +1,10 @@
 import cv2 as cv
 from XdockParams import round_coord, round_coords, \
-                      N_DOCK, W_DOCK, H_LANE, H_FLOOR, H_FRONT, H_RIGHT, H_LEFT, W_UP, W_DOWN, H_MANEUVER,\
-                      N_BUFFER_STORE, W_BUFFER_STORE,  H_BUFFER_STORE, N_COMP_X, N_COMP_Y, W_COMPARTMENT, H_COMPARTMENT, \
+                      W_DOCK, H_FRONT, H_RIGHT, H_LEFT, H_MANEUVER,\
+                      W_BUFFER_COMP, H_BUFFER_COMP, \
                       BLACK
+
+from ModelParameters import ModelParams as M
 
 from SimulationConfig import destination_color_dict, PRIO_LIST
 from Robot import BSM
@@ -29,10 +31,10 @@ class BufferStoreRow:
         self.n_store_reserved += 1
 
     def is_store_available(self):
-        return self.n_store_reserved<N_COMP_X
+        return self.n_store_reserved<M.N_BUFFER_COL
 
     def store_roll_container(self, rol):
-        if len(self.store)>=N_COMP_X:
+        if len(self.store)>=M.N_BUFFER_COL:
             print("ERROR: BufferStoreRow.store_roll_container(). Buffer overflow\n", self, "\nrol =", str(rol).replace('\n','\t'))
             return
 
@@ -54,7 +56,7 @@ class BufferStoreRow:
         for c, rol in enumerate(reversed(self.store)):
             if rol.scheduled: continue
             rol.scheduled = True
-            return N_COMP_X-1-c
+            return M.N_BUFFER_COL - 1 - c
         return -1
 
     def pickup_roll_container(self):
@@ -65,21 +67,21 @@ class BufferStoreRow:
 
 class BufferStore:
     def __init__(self, dock, buffer):
-        if dock<0   or N_DOCK<=dock: return
-        if buffer<0 or N_BUFFER_STORE<=buffer: return
+        if dock<0   or M.N_DOCK<=dock: return
+        if buffer<0 or M.N_BUFFER_STORE<=buffer: return
 
         self.dock   = dock
         self.buffer = buffer
 
-        self.w1 = dock * W_DOCK + (W_DOWN + W_DOCK - W_UP - W_BUFFER_STORE) / 2
-        self.w2 = self.w1 + W_BUFFER_STORE
+        self.w1 = dock * W_DOCK + (M.W_DOWN + W_DOCK - M.W_UP - M.W_BUFFER_STORE) / 2
+        self.w2 = self.w1 + M.W_BUFFER_STORE
 
-        self.h1 = H_FRONT + H_LANE + H_MANEUVER + H_RIGHT + buffer * (H_BUFFER_STORE + H_LEFT + H_RIGHT)
-        self.h2 = self.h1 + H_BUFFER_STORE
+        self.h1 = H_FRONT + M.H_LANE + H_MANEUVER + H_RIGHT + buffer * (M.H_BUFFER_STORE + H_LEFT + H_RIGHT)
+        self.h2 = self.h1 + M.H_BUFFER_STORE
 
         # surrounding path coords
-        self.w1_ext = dock * W_DOCK + W_DOWN / 2
-        self.w2_ext = (dock + 1) * W_DOCK - W_UP / 2
+        self.w1_ext = dock * W_DOCK + M.W_DOWN / 2
+        self.w2_ext = (dock + 1) * W_DOCK - M.W_UP / 2
 
         self.h1_ext = self.h1 - H_RIGHT / 2
         self.h2_ext = self.h2 + H_LEFT  / 2
@@ -89,9 +91,9 @@ class BufferStore:
         self.w1_ext, self.h1_ext = round_coords((self.w1_ext, self.h1_ext))
         self.w2_ext, self.h2_ext = round_coords((self.w2_ext, self.h2_ext))
 
-        self.w_dict = dict([(col, round_coord(self.w1 + (col+0.5)*W_COMPARTMENT)) for col in range(N_COMP_X)])
-        self.h_dict = dict([(row, round_coord(self.h1 + (row+0.5)*H_COMPARTMENT)) for row in range(N_COMP_Y)])
-        self.store  = [BufferStoreRow(self.w_dict, self.h_dict[row], row, self) for row in range(N_COMP_Y)]
+        self.w_dict = dict([(col, round_coord(self.w1 + (col+0.5) * W_BUFFER_COMP)) for col in range(M.N_BUFFER_COL)])
+        self.h_dict = dict([(row, round_coord(self.h1 + (row+0.5) * H_BUFFER_COMP)) for row in range(M.N_BUFFER_ROW)])
+        self.store  = [BufferStoreRow(self.w_dict, self.h_dict[row], row, self) for row in range(M.N_BUFFER_ROW)]
 
     def __str__(self):
         text  = f"dock      = {self.dock:d} \n"
@@ -109,13 +111,13 @@ class BufferStore:
         self.store[row].schedule_roll_container()
 
     def get_row_not_scheduled(self):
-        for row in range(N_COMP_Y):
+        for row in range(M.N_BUFFER_ROW):
             if self.store[row].get_n_not_scheduled()>0:
                 return row
         return -1
 
     def get_first_available_store(self):
-        for row in range(N_COMP_Y):
+        for row in range(M.N_BUFFER_ROW):
             if self.store[row].is_store_available():
                 return row
         return -1
@@ -123,14 +125,17 @@ class BufferStore:
     def reserve_store(self, row):
         self.store[row].reserve_store()
 
+    def get_n_stored(self):
+        return sum(self.store[row].get_n_stored() for row in range(M.N_BUFFER_ROW))
+
     def store_roll_container(self, row, rol):
-        if row>=N_COMP_Y: return
-        if self.store[row].get_n_stored()>=N_COMP_X: return
+        if row>=M.N_BUFFER_ROW: return
+        if self.store[row].get_n_stored()>=M.N_BUFFER_COL: return
 
         self.store[row].store_roll_container(rol)
 
     def pickup_roll_container(self, row):
-        if row>=N_COMP_Y: return
+        if row>=M.N_BUFFER_ROW: return
         rol = self.store[row].pickup_roll_container()
         if not rol is None:  return rol
         print("ERROR: BufferStore.pickup_roll_container(). Store empty?", str(self))
@@ -147,26 +152,31 @@ class BufferStore:
             return self.w_dict[col], self.h_dict[row]
 
     def get_store_positions(self):
-        return [self.get_grid_coords(row, 0) for row in range(N_COMP_Y)]
+        return [self.get_grid_coords(row, 0) for row in range(M.N_BUFFER_ROW)]
 
     def get_lowest_row_coords(self, left=True):
-        if left: return round_coords((self.w1_ext, self.h1 + 0.5 * H_COMPARTMENT))
-        else:    return round_coords((self.w2_ext, self.h1 + 0.5 * H_COMPARTMENT))
+        if left: return round_coords((self.w1_ext, self.h1 + 0.5 * H_BUFFER_COMP))
+        else:    return round_coords((self.w2_ext, self.h1 + 0.5 * H_BUFFER_COMP))
 
     def draw(self, floor_plan):
-        for i in range(N_COMP_X):
-            w1 = self.w1 + i * W_COMPARTMENT
-            w2 = self.w1 + (i + 1) * W_COMPARTMENT
-            for j in range(N_COMP_Y):
-                h1 = self.h1 + (j + 1) * H_COMPARTMENT
-                h2 = self.h1 + j * H_COMPARTMENT
+        if not self.is_store_unused() and self.get_n_stored()==0:
+            pt1 = floor_plan.pnt_from_coords(self.w1, self.h1)
+            pt2 = floor_plan.pnt_from_coords(self.w2, self.h2)
+            floor_plan.figure = cv.rectangle(floor_plan.figure, pt1, pt2, (160, 160, 160), -1)
+
+        for i in range(M.N_BUFFER_COL):
+            w1 = self.w1 + i * W_BUFFER_COMP
+            w2 = self.w1 + (i + 1) * W_BUFFER_COMP
+            for j in range(M.N_BUFFER_ROW):
+                h1 = self.h1 + (j + 1) * H_BUFFER_COMP
+                h2 = self.h1 + j * H_BUFFER_COMP
 
                 pt1 = floor_plan.pnt_from_coords(w1, h1)
                 pt2 = floor_plan.pnt_from_coords(w2, h2)
 
                 floor_plan.figure = cv.rectangle(floor_plan.figure, pt1, pt2, BLACK, 1)
 
-        for row in range(N_COMP_Y):
+        for row in range(M.N_BUFFER_ROW):
             for rol in self.store[row].store:
                 rol.draw(floor_plan)
 

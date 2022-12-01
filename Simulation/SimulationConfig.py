@@ -1,5 +1,4 @@
-from XdockParams import N_DOCK, N_BUFFER_STORE
-from Position import Position
+from ModelParameters import ModelParams as M
 
 
 PRIO_LIST               = ['A','B']
@@ -9,7 +8,7 @@ destination_color_dict  = {"ALR": (0,255,255), "AP": (255,  0,0), "KHM":(100,100
                            "LW" : (255,0,150), "ZL": ( 50,255,0), "HGL":(250,255,  0), "ELT":(0,0,255)}
 
 def set_dock_names_colors(floor_plan):
-    for dock in range(N_DOCK):
+    for dock in range(M.N_DOCK):
         dest = destination_from_dock(dock)
         prio = prio_from_dock(dock)
 

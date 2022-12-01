@@ -1,47 +1,37 @@
 import numpy as np
 
-EPS   = 1.e-6
-WHITE = (255,255,255)
-BLACK = (0,0,0)
-
-H_COMPARTMENT  = 0.9
-W_COMPARTMENT  = 0.9
-N_COMP_X       = 3 ## 3
-N_COMP_Y       = 6 ##12
-N_BUFFER_STORE = 3  ##2
-W_BUFFER_STORE = N_COMP_X*W_COMPARTMENT
-H_BUFFER_STORE = N_COMP_Y*H_COMPARTMENT
-
-
-W_DOWN         = 0.8
-W_UP           = 0.8
-W_DOCK         = W_DOWN + W_BUFFER_STORE + W_UP
-
-H_PARK         = 2.0
-W_PARK_PLACE   = 1.1
-H_RIGHT        = 1.0
-H_LEFT         = 1.0
-H_MANEUVER     = H_RIGHT + H_PARK + H_LEFT
-
-N_LANE         =  4   # For each dock: two up and two down
-W_LANE         =  1.1
-H_LANE         = 18.
-MAX_LANE_STORE = 24 #24
-H_LANE_STORE   = H_LANE/MAX_LANE_STORE # should be H_LANE/MAX_LANE_STORE and this should be larger than H_ROLL_CONTAINER
-
-N_DOCK     =  16 ##16
-
-W_FLOOR    = N_DOCK * W_DOCK
-H_FRONT    = 2.0
-H_FLOOR    = H_FRONT + H_LANE + H_MANEUVER + (H_RIGHT+H_BUFFER_STORE+H_LEFT)*N_BUFFER_STORE
-
 H_ROLL_CONTAINER = 0.7
 W_ROLL_CONTAINER = 0.7
 
+# Robot dimensions
 W1_ROBOT = 0.3
 W2_ROBOT = 0.9
 H1_ROBOT = 0.7
 H2_ROBOT = 0.4
+
+# Buffer store dimensions
+H_BUFFER_COMP  = 0.9
+W_BUFFER_COMP  = 0.9
+
+# Buffer lane
+N_LANE         =  4   # For each dock: two up and two down
+W_LANE         =  1.1
+H_LANE_STORE   = 1.05*H_ROLL_CONTAINER # Space occupied by one roll container on the buffer lane
+
+# Dock dimensions
+W_DOCK         =  5.  # width [m]
+H_DOCK_LEGENDS = -2.2 # Used for drawing dock/truck info on floor plan
+
+# Parking dimensions
+H_PARK         = 2.0
+W_PARK_PLACE   = 1.1
+
+# Floor dimensions
+H_RIGHT    = 1.0
+H_LEFT     = 1.0
+H_MANEUVER = H_RIGHT + H_PARK + H_LEFT
+H_FRONT    = 2.0
+
 
 TIME_STEP_S       =  0.25
 ROBOT_SPEED       =  1.0  # (1.2) m/s
@@ -49,8 +39,9 @@ ROBOT_LOAD_TIME   =  5.   # [s]
 ROBOT_UNLOAD_TIME =  5.   # [s]
 BUFFER_LANE_SPEED =  0.3
 
-
 MAX_TRUCK_LOAD           = 48
+
+# Timings
 TIME_LOAD_BUFFER_LANE    = H_ROLL_CONTAINER / BUFFER_LANE_SPEED
 TIME_LOAD_RC_TRUCK       = 19   # time [s], per roll container to load a roll container onto a truck
 TIME_UNLOAD_RC_TRUCK     = 15   # time [s], per roll container to unload a roll container from a truck
@@ -62,8 +53,15 @@ MIN_DOCK_TIME_GAP        =  30  # minimum time interval [s] between two trucks a
 MAX_DOCK_TIME_LOADING    = TIME_DOCK_INBOUND + MAX_TRUCK_LOAD * TIME_LOAD_RC_TRUCK   + TIME_DOCK_EXTRA + TIME_DOCK_OUTBOUND
 MAX_DOCK_TIME_UNLOADING  = TIME_DOCK_INBOUND + MAX_TRUCK_LOAD * TIME_UNLOAD_RC_TRUCK + TIME_DOCK_EXTRA + TIME_DOCK_OUTBOUND
 
+# Logging
 LOG_INTERVAL_ROBOT       = 60.
 LOG_DIR = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/"
+
+# General
+EPS   = 1.e-6
+WHITE = (255,255,255)
+BLACK = (0,0,0)
+
 
 _COORD_SCALE = 1000.
 def round_coord(co):

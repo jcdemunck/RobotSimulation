@@ -1,22 +1,21 @@
 import cv2 as cv
-from XdockParams import N_DOCK, W_DOCK, H_LANE, W_UP, W_DOWN, H_LEFT, H_RIGHT, H_FRONT, H_PARK, W_PARK_PLACE, \
-                        WHITE, \
+from XdockParams import W_DOCK, H_LEFT, H_RIGHT, H_FRONT, H_PARK, W_PARK_PLACE, \
                         round_coords
-
+from ModelParameters import ModelParams as M
 
 class Parking:
     def __init__(self, dock):
-        if dock<0 or N_DOCK<=dock: return
+        if dock<0 or M.N_DOCK<=dock: return
 
         self.dock = dock
-        self.w1   = dock * W_DOCK + W_DOWN
-        self.w2   = self.w1 + W_DOCK - W_UP - W_DOWN
-        self.h1   = H_FRONT + H_LANE + H_RIGHT
+        self.w1   = dock * W_DOCK + M.W_DOWN
+        self.w2   = self.w1 + W_DOCK - M.W_UP - M.W_DOWN
+        self.h1   = H_FRONT + M.H_LANE + H_RIGHT
         self.h2   = self.h1 + H_PARK
 
         # surrounding circulation box
-        self.w1_ext = self.w1 - W_DOWN/2
-        self.w2_ext = self.w2 + W_UP/2
+        self.w1_ext = self.w1 - M.W_DOWN/2
+        self.w2_ext = self.w2 + M.W_UP/2
         self.h1_ext = self.h1 - H_RIGHT/2
         self.h2_ext = self.h2 + H_LEFT/2
 
@@ -50,11 +49,6 @@ class Parking:
         for p in self.coord_dict:
             pnt               = floor_plan.pnt_from_coords(*self.coord_dict[p])
             floor_plan.figure = cv.circle(floor_plan.figure, pnt, 5, (0,0,180), -1)
-
-        text = f"park {self.dock:d}"
-        pnt  = floor_plan.pnt_from_coords(self.w1 + 0.2 * (self.w2-self.w1), self.h1 + 0.3 * (self.h2 - self.h1))
-        font = cv.FONT_HERSHEY_SIMPLEX
-        floor_plan.figure = cv.putText(floor_plan.figure, text, pnt, font, 0.5, WHITE)
 
     def draw_circulation(self, floor_plan):
         pt1 = floor_plan.pnt_from_coords(self.w1, self.h1_ext)
