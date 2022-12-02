@@ -5,7 +5,7 @@ from pathlib import Path
 from FloorPlan import FloorPlan
 from Position import Position
 
-from XdockParams import TIME_STEP_S, TIME_LOAD_BUFFER_LANE
+from XdockParams import TIME_STEP_S, TIME_LOAD_BUFFER_LANE, DIR_VIDEO
 from SimulationConfig import set_dock_names_colors, get_output_dock
 from TruckPlan import TruckPlan
 from Robot import BSM
@@ -18,14 +18,11 @@ M.set_n_robot(32)
 M.set_max_buffer_lane_store(18)
 
 
-SIMULATE        = False
+SIMULATE        = False # Truck simulation or 'real' data?
 
 N_VIDEO_FRAME   = -1
 video_out       = None
 im_list         = []
-DIR_VIDEO       = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/Video/"
-
-TIME_LOAD_TOTAL = 1.5 * TIME_LOAD_BUFFER_LANE
 
 
 def main():
@@ -59,17 +56,19 @@ def main():
             rc_incoming = fp.get_incoming_roll_containers(dock)
             truck       = fp.docks[dock].truck
 
+            # Process incoming trolleys
             if len(rc_incoming)>0:
                 priority = 0 if truck is None or not truck.inbound else fp.get_nrc_incoming(dock)
 
                 # assign robots to incoming roll containers, until all roll containers are assigned to robot
-                rob_list = sorted(fp.robots, key=lambda rob: rob.get_task_list_length())
+                ##rob_list = sorted(fp.robots, key=lambda rob: rob.get_task_list_length())
+                rob_list = BSM.get_sorted_robots(fp.robots, dock)
 
                 for n, (robot, roll_io) in enumerate(zip(rob_list, rc_incoming), start=1):
                     pos_pickup = Position(fp, dock, buffer_lane=roll_io.lane)
 
                     if robot.is_idle():
-                        wait  = max(0., roll_io.eta + n*TIME_LOAD_TOTAL -robot.get_time_to_pos(fp, pos_pickup) )
+                        wait  = max(0., roll_io.eta + n*1.5*TIME_LOAD_BUFFER_LANE - robot.get_time_to_pos(fp, pos_pickup) )
                         robot.wait_process_incoming(fp, wait, pos_pickup)
                     else:
                         robot.append_process_incoming(fp, pos_pickup, priority>3)
