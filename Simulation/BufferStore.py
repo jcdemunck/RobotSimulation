@@ -159,11 +159,6 @@ class BufferStore:
         else:    return round_coords((self.w2_ext, self.h1 + 0.5 * H_BUFFER_COMP))
 
     def draw(self, floor_plan):
-        if not self.is_store_unused() and self.get_n_stored()==0:
-            pt1 = floor_plan.pnt_from_coords(self.w1, self.h1)
-            pt2 = floor_plan.pnt_from_coords(self.w2, self.h2)
-            floor_plan.figure = cv.rectangle(floor_plan.figure, pt1, pt2, (160, 160, 160), -1)
-
         for i in range(M.N_BUFFER_COL):
             w1 = self.w1 + i * W_BUFFER_COMP
             w2 = self.w1 + (i + 1) * W_BUFFER_COMP
@@ -173,7 +168,8 @@ class BufferStore:
 
                 pt1 = floor_plan.pnt_from_coords(w1, h1)
                 pt2 = floor_plan.pnt_from_coords(w2, h2)
-
+                if i<self.store[j].n_store_reserved:
+                    floor_plan.figure = cv.rectangle(floor_plan.figure, pt1, pt2, (160, 160, 160), -1)
                 floor_plan.figure = cv.rectangle(floor_plan.figure, pt1, pt2, BLACK, 1)
 
         for row in range(M.N_BUFFER_ROW):

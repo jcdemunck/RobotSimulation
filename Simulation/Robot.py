@@ -177,7 +177,7 @@ class RobotLogger:
 
         self.time      = 0.
         self.samp      = 0
-        self.task_dict = dict()               # current number of tasks of each robot
+        self.task_dict = Counter()            # current number of tasks of each robot
         self.rob_dict  = defaultdict(Counter) # number of times each task type is executed, for each robot
         self.log_file  = ""
 
@@ -197,15 +197,17 @@ class RobotLogger:
                 with open(self.log_file, "a") as fp:
                     for id in sorted(self.rob_dict):
                         times = [self.rob_dict[id][ta] * TIME_STEP_S/3600. for ta in RobotTask.log_tasks]
+                        n_log = int(0.5+LOG_INTERVAL_ROBOT/TIME_STEP_S)
                         if id>=0:
-                            n_tasks = self.task_dict[rob.ID]
-                            line    = f"{str(id) :s}\t{self.time/3600.:9.3f}\t" + '\t'.join(f"{t:8.1f}" for t in times) + '\t'+str(n_tasks)+'\n'
+                            n_tasks = self.task_dict[id]/n_log
+                            line    = f"{str(id) :s}\t{self.time/3600.:9.3f}\t" + '\t'.join(f"{t:8.1f}" for t in times) + '\t'+f"{n_tasks:8.1f}"+'\n'
                         else:
                             n_rob   = len(args[0].robots)
                             times   = [t/n_rob for t in times]  # Compute mean time
-                            n_tasks = sum(v for v in self.task_dict.values())
-                            line    = f"total\t{self.time/3600.:9.3f}\t" + '\t'.join(f"{t:8.1f}" for t in times) + '\t'+str(n_tasks)+'\n'
+                            n_tasks = sum(v for v in self.task_dict.values())/(n_rob*n_log)
+                            line    = f"total\t{self.time/3600.:9.3f}\t" + '\t'.join(f"{t:8.1f}" for t in times) + '\t'+f"{n_tasks:8.1f}"+'\n'
                         fp.write(line)
+                self.task_dict = Counter()
 
             # Timings
             self.time += TIME_STEP_S
@@ -214,7 +216,7 @@ class RobotLogger:
                 self.samp = 0
 
         # Keep track of stats
-        self.task_dict[rob.ID] = len(rob.task_list)
+        self.task_dict[rob.ID] += len(rob.task_list)
         task = "park" if len(rob.task_list)==0 else rob.task_list[0].task_type
         self.rob_dict[rob.ID][task] += 1
         self.rob_dict[-1    ][task] += 1

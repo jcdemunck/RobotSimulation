@@ -15,7 +15,7 @@ M = ModelParams()
 M.set_n_buffer_store(3)
 M.set_n_buffer_row_col(8,3)
 M.set_n_robot(32)
-M.set_max_buffer_lane_store(12)
+M.set_max_buffer_lane_store(18)
 
 
 SIMULATE        = False
@@ -80,15 +80,15 @@ def main():
 
             # Process outbound trucks
             if not truck.inbound:
+                # Get all buffers with required destination, but skip stores that are unused.
                 buffer_list = BSM.get_buffer_list(truck.destination, truck.prios[0])
-                buffer_list = [(d, b) for (d,b) in buffer_list if not fp.buffer_stores[d, b].is_store_unused()]
-
+                buffer_list = [(d,b) for (d,b) in buffer_list if not fp.buffer_stores[d,b].is_store_unused()]
                 dock_dest   = get_output_dock(truck.destination, truck.prios[0])
                 rob_list    = BSM.get_sorted_robots(fp.robots, dock_dest)
                 r           = 0
                 for (dock_orig,store) in buffer_list: # plan robots from buffer store to output lane
-                    row       = fp.buffer_stores[dock_orig, store].get_row_not_scheduled()
-                    lane      = fp.get_best_available_lane(dock_dest, output=True)
+                    row     = fp.buffer_stores[dock_orig, store].get_row_not_scheduled()
+                    lane    = fp.get_best_available_lane(dock_dest, output=True)
 
                     while lane>=0 and row>=0:
                         fp.buffer_stores[dock_orig, store].schedule_roll_container(row)

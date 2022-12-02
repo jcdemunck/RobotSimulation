@@ -55,7 +55,7 @@ MAX_DOCK_TIME_UNLOADING  = TIME_DOCK_INBOUND + MAX_TRUCK_LOAD * TIME_UNLOAD_RC_T
 
 # Logging
 LOG_INTERVAL_ROBOT       = 60.
-LOG_DIR = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/"
+LOG_DIR = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/Logging/"
 
 # General
 EPS   = 1.e-6

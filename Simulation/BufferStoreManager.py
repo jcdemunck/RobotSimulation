@@ -55,7 +55,7 @@ class BufferStoreManager:
         # Search globally
         docks = [dock + pm * (d + 1) for d in range(M.N_DOCK) for pm in [-1, 1] if 0<=dock + pm * (d + 1)<M.N_DOCK]
         for dock in docks:
-            for buffer in range(M.N_BUFFER_STORE - 1, -1, -1):
+            for buffer in range(M.N_BUFFER_STORE-1, -1, -1):
                 if floor_plan.buffer_stores[dock, buffer].is_store_unused():
                     self.loc_dp_dict[dock, buffer] = (dest, prio)
                     self.__update_buffer_dict()
@@ -74,14 +74,14 @@ class BufferStoreManager:
             if buffer_store is None:
                 print("ERROR: BufferStoreManager.choose_store(). buffer overflow. prio = ", prio, "dest = ", dest)
 
-            store        = buffer_store.buffer
-            dock         = buffer_store.dock
-            row          = buffer_store.get_first_available_store()
-            pos_store    = Position(floor_plan, dock, buffer_store=store, row=row, col=0)
+            store     = buffer_store.buffer
+            dock      = buffer_store.dock
+            row       = buffer_store.get_first_available_store()
+            pos_store = Position(floor_plan, dock, buffer_store=store, row=row, col=0)
             buffer_store.reserve_store(row)
         else:
             pos_store = Position(floor_plan, dock, buffer_lane=lane)
-            floor_plan.buffer_lanes[(dock, lane)].reserve_store()
+            floor_plan.buffer_lanes[dock, lane].reserve_store()
 
         return pos_store
 
