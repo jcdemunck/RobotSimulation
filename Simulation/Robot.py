@@ -185,6 +185,9 @@ class RobotLogger:
         return partial(self.__call__, obj)
 
     def __call__(self, rob, *args, **kwargs):
+        if not M.ROBOT_LOGGING:
+            return self.func(rob, *args, **kwargs)
+
         # Write log file header
         if self.log_file=="":
             self.log_file = get_log_filename("Robots")

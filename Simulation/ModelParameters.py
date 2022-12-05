@@ -23,6 +23,8 @@ class ModelParams:
     N_DOCK          = 16
     N_ROBOT         = 32
 
+    ROBOT_LOGGING   = True
+
     # Dependent parameters, to be set by self.__update()
     W_BUFFER_STORE  = 0.
     H_BUFFER_STORE  = 0.
@@ -75,3 +77,6 @@ class ModelParams:
     def set_n_robot(self, n_robot):
         ModelParams.N_ROBOT = n_robot
         self.__update()
+
+    def set_robot_logging(self, set_log):
+        ModelParams.ROBOT_LOGGING = set_log

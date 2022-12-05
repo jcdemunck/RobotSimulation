@@ -16,6 +16,7 @@ M.set_n_buffer_store(3)
 M.set_n_buffer_row_col(8,3)
 M.set_n_robot(32)
 M.set_max_buffer_lane_store(18)
+M.set_robot_logging(False)
 
 
 SIMULATE        = False # Truck simulation or 'real' data?
