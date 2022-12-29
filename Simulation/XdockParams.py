@@ -23,26 +23,19 @@ W_DOCK         =  5.  # width [m]
 H_DOCK_LEGENDS = -2.2 # Used for drawing dock/truck info on floor plan
 
 # Parking dimensions
-H_PARK         = 2.0
+H_PARK         = 1.5
 W_PARK_PLACE   = 1.1
 
 # Floor dimensions
 H_RIGHT    = 1.0
 H_LEFT     = 1.0
-H_MANEUVER = H_RIGHT + H_PARK + H_LEFT
 H_FRONT    = 2.0
 
-
 TIME_STEP_S       =  0.25
-ROBOT_SPEED       =  1.0  # (1.2) m/s
-ROBOT_LOAD_TIME   =  5.   # [s]
-ROBOT_UNLOAD_TIME =  5.   # [s]
-BUFFER_LANE_SPEED =  0.3
 
 MAX_TRUCK_LOAD           = 48
 
 # Timings
-TIME_LOAD_BUFFER_LANE    = H_ROLL_CONTAINER / BUFFER_LANE_SPEED
 TIME_LOAD_RC_TRUCK       = 19   # time [s], per roll container to load a roll container onto a truck
 TIME_UNLOAD_RC_TRUCK     = 15   # time [s], per roll container to unload a roll container from a truck
 TIME_DOCK_INBOUND        = 120  # time [s] the driver needs to put his truck at the dock (before loading/unloading)
@@ -55,8 +48,6 @@ MAX_DOCK_TIME_UNLOADING  = TIME_DOCK_INBOUND + MAX_TRUCK_LOAD * TIME_UNLOAD_RC_T
 
 # Logging
 LOG_INTERVAL_ROBOT       = 60.
-LOG_DIR   = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/Logging/"
-DIR_VIDEO = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/Video/"
 
 # General
 EPS   = 1.e-6

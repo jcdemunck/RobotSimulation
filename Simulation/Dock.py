@@ -1,7 +1,7 @@
 import cv2 as cv
 
 from XdockParams import W_DOCK, H_DOCK_LEGENDS,  \
-                        WHITE, TIME_LOAD_BUFFER_LANE, TIME_STEP_S,\
+                        WHITE, TIME_STEP_S,\
                         round_coords
 from ModelParameters import ModelParams as M
 
@@ -24,7 +24,7 @@ class Dock:
         self.color      = (200,0,0)
 
         self.roll_container      = None
-        self.rc_dead_time        = TIME_LOAD_BUFFER_LANE
+        self.rc_dead_time        = M.TIME_LOAD_BUFFER_LANE
         self.incomplete_unloaded = []
 
     def set_color(self, col):
@@ -102,7 +102,7 @@ class Dock:
         elif not self.truck.inbound and not self.roll_container is None and self.rc_dead_time<=0.:
             self.truck.load_next_roll_container(self.roll_container)
             self.roll_container = None
-            self.rc_dead_time   = TIME_LOAD_BUFFER_LANE
+            self.rc_dead_time   = M.TIME_LOAD_BUFFER_LANE
 
     def roll_container_available(self):
         if not self.truck or not self.truck.inbound: return False
@@ -115,11 +115,11 @@ class Dock:
     def get_roll_container(self):
         roll = self.roll_container
         self.roll_container = None
-        self.rc_dead_time   = TIME_LOAD_BUFFER_LANE
+        self.rc_dead_time   = M.TIME_LOAD_BUFFER_LANE
         return roll
 
     def put_roll_container(self, rol, inbound=False):
         self.roll_container   = rol
-        self.rc_dead_time     = TIME_LOAD_BUFFER_LANE
+        self.rc_dead_time     = M.TIME_LOAD_BUFFER_LANE
         self.roll_container.w = 0.2*self.w1 + 0.8*self.w2 if inbound else 0.8*self.w1 + 0.2*self.w2
         self.roll_container.h = -self.h1/2

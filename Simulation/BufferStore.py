@@ -1,6 +1,6 @@
 import cv2 as cv
 from XdockParams import round_coord, round_coords, \
-                      W_DOCK, H_FRONT, H_RIGHT, H_LEFT, H_MANEUVER,\
+                      W_DOCK, H_FRONT, H_RIGHT, H_LEFT,\
                       W_BUFFER_COMP, H_BUFFER_COMP, \
                       BLACK
 
@@ -76,7 +76,7 @@ class BufferStore:
         self.w1 = dock * W_DOCK + (M.W_DOWN + W_DOCK - M.W_UP - M.W_BUFFER_STORE) / 2
         self.w2 = self.w1 + M.W_BUFFER_STORE
 
-        self.h1 = H_FRONT + M.H_LANE + H_MANEUVER + H_RIGHT + buffer * (M.H_BUFFER_STORE + H_LEFT + H_RIGHT)
+        self.h1 = H_FRONT + M.H_LANE + M.H_MANEUVER + H_RIGHT + buffer * (M.H_BUFFER_STORE + H_LEFT + H_RIGHT)
         self.h2 = self.h1 + M.H_BUFFER_STORE
 
         # surrounding path coords

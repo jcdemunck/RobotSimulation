@@ -314,7 +314,7 @@ class FloorPlan:
             return self.buffer_lanes[dock, buffer_lane].get_grid_coords()
 
         if parking>=0:
-            if parking>=self.parkings[dock].n_parc_spot: return
+            if parking>=self.parkings[dock].n_parc_col: return
             return self.parkings[dock].get_grid_coords(park=parking)
 
         if store>=0:

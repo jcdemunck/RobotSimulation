@@ -5,19 +5,28 @@ from pathlib import Path
 from FloorPlan import FloorPlan
 from Position import Position
 
-from XdockParams import TIME_STEP_S, TIME_LOAD_BUFFER_LANE, DIR_VIDEO
+from XdockParams import TIME_STEP_S
 from SimulationConfig import set_dock_names_colors, get_output_dock
 from TruckPlan import TruckPlan
 from Robot import BSM
 
-from ModelParameters import ModelParams
+from ModelParameters import ModelParams, get_video_dir
 M = ModelParams()
 M.set_n_buffer_store(3)
 M.set_n_buffer_row_col(8,3)
-M.set_n_robot(32)
+M.set_n_robot(40)
 M.set_max_buffer_lane_store(18)
-M.set_robot_logging(False)
+M.set_robot_logging(True)
+M.set_n_park_row(2)
 
+M.set_data_dir("C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/")
+M.set_data_input_file("Transport_summary.xlsx")
+M.set_logging_sub_dir("Logging")
+M.set_video_sub_dir("Video")
+
+M.set_robot_speed(1.0)
+M.set_robot_load_unload_time(25.,25.)
+M.set_buffer_lane_speed(0.3)
 
 SIMULATE        = False # Truck simulation or 'real' data?
 
@@ -69,7 +78,7 @@ def main():
                     pos_pickup = Position(fp, dock, buffer_lane=roll_io.lane)
 
                     if robot.is_idle():
-                        wait  = max(0., roll_io.eta + n*1.5*TIME_LOAD_BUFFER_LANE - robot.get_time_to_pos(fp, pos_pickup) )
+                        wait  = max(0., roll_io.eta + n*1.5*M.TIME_LOAD_BUFFER_LANE - robot.get_time_to_pos(fp, pos_pickup) )
                         robot.wait_process_incoming(fp, wait, pos_pickup)
                     else:
                         robot.append_process_incoming(fp, pos_pickup, priority>3)
@@ -132,8 +141,8 @@ def main():
                 for im in im_list:
                     video_out.write(im)
                 video_out.release()
-                Path(DIR_VIDEO+"test0.avi").unlink(missing_ok=True)
-                Path("test0.avi").rename(DIR_VIDEO+"test0.avi")
+                Path(get_video_dir()+"test0.avi").unlink(missing_ok=True)
+                Path("test0.avi").rename(get_video_dir()+"test0.avi")
                 break
 
     fp.log_results()

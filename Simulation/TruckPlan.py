@@ -11,9 +11,6 @@ from ModelParameters import ModelParams as M
 from RollContainer import RollContainer
 from SimulationConfig import PRIO_LIST, DESTINATIONS, destination_color_dict, get_output_dock, destination_from_dock, prio_from_dock
 
-DIR     = "C:/Users/MunckJande/OneDrive - PostNL/Documenten/Projecten/Robots_at_Xdocks/"
-FILE_IN = "Transport_summary.xlsx"
-
 
 class TruckPlan:
     def __init__(self, simulate, x_dock_name="C_TL"):
@@ -94,7 +91,7 @@ class TruckPlan:
 
 
     def __trucks_from_file(self, x_dock, max_in=-1, max_out=-1):
-        df = pd.read_excel(DIR+FILE_IN)
+        df = pd.read_excel(M.DATA_DIR+M.DATA_FILE)
         df = df[df["x_dock"]==x_dock].sort_values(["time"]).reindex()
         if max_in <=0: max_in  = 1+len(df)
         if max_out<=0: max_out = 1+len(df)
@@ -316,7 +313,7 @@ def main():
             fu, _ = P.get_minimum_stock_function(time_delta, dest, p)
             df.loc[len(df)] = [dest, p] + list(fu)
 
-    df.to_excel(DIR + "Stocks.xlsx")
+    df.to_excel(M.DATA_DIR + "Stocks.xlsx")
 
 if __name__=="__main__":
     main()

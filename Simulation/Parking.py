@@ -11,7 +11,7 @@ class Parking:
         self.w1   = dock * W_DOCK + M.W_DOWN
         self.w2   = self.w1 + W_DOCK - M.W_UP - M.W_DOWN
         self.h1   = H_FRONT + M.H_LANE + H_RIGHT
-        self.h2   = self.h1 + H_PARK
+        self.h2   = self.h1 + H_PARK*M.N_PARK_ROW
 
         # surrounding circulation box
         self.w1_ext = self.w1 - M.W_DOWN/2
@@ -24,10 +24,15 @@ class Parking:
         self.w1_ext, self.h1_ext = round_coords((self.w1_ext, self.h1_ext))
         self.w2_ext, self.h2_ext = round_coords((self.w2_ext, self.h2_ext))
 
-        self.n_parc_spot   = int(0.5+(self.w2-self.w1)/W_PARK_PLACE)
-        h                  = (self.h2+self.h1)/2
-        step               = (self.w2-self.w1-W_PARK_PLACE)/(self.n_parc_spot-1)
-        self.coord_dict    = dict([(p, round_coords((self.w1+W_PARK_PLACE/2 + p*step, h))) for p in range(self.n_parc_spot)])
+        self.n_parc_col = max(2, int(0.5 + (self.w2 - self.w1) / W_PARK_PLACE))
+        step_w          = (self.w2 - self.w1 - W_PARK_PLACE) / (self.n_parc_col - 1)
+        if M.N_PARK_ROW==1:
+            h               = (self.h2+self.h1)/2
+            self.coord_dict = dict([(c, round_coords((self.w1+W_PARK_PLACE/2 + c*step_w, h))) for c in range(self.n_parc_col)])
+        elif M.N_PARK_ROW>1:
+            step_h = (self.h2 - self.h1 - H_PARK) / (M.N_PARK_ROW - 1)
+            self.coord_dict = dict([(r*self.n_parc_col+c, round_coords((self.w1+W_PARK_PLACE/2 + c*step_w,
+                                                                        self.h1+H_PARK/2 + r*step_h))) for c in range(self.n_parc_col) for r in range(M.N_PARK_ROW)])
 
     def get_grid_coords(self, park=-1, corner=-1):
         if park<0:
@@ -38,8 +43,11 @@ class Parking:
 
         return self.coord_dict[park]
 
+    def get_n_parking(self):
+        return self.n_parc_col * M.N_PARK_ROW
+
     def get_park_positions(self):
-        return [self.get_grid_coords(park) for park in range(self.n_parc_spot)]
+        return [self.get_grid_coords(park) for park in range(self.get_n_parking())]
 
     def draw(self, floor_plan):
         pt1 = floor_plan.pnt_from_coords(self.w1, self.h1)

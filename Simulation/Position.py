@@ -27,7 +27,7 @@ class Position:
             self.pos_type    = "buffer_lane"
 
         elif parking>=0:
-            if parking>=floor_plan.parkings[dock].n_parc_spot:
+            if parking>=floor_plan.parkings[dock].get_n_parking():
                 print("ERROR: Position.__init__(). parking = ", parking)
                 return
             self.parking   = parking

@@ -3,7 +3,7 @@ from collections import namedtuple
 
 from XdockParams import round_coords, \
                       W_DOCK, H_FRONT, \
-                      W_LANE, N_LANE, H_LANE_STORE, BUFFER_LANE_SPEED, TIME_LOAD_BUFFER_LANE, \
+                      W_LANE, N_LANE, H_LANE_STORE, \
                       TIME_STEP_S, \
                       BLACK, WHITE
 
@@ -53,10 +53,10 @@ class BufferLane:
             return list of expected roll containers as tuples:
             (expected time of availability, lane, roll container)
         """
-        return [RollContainerIO((self.store_coord_dict[M.MAX_LANE_STORE-1][1]-rol.h)/BUFFER_LANE_SPEED, self.lane, rol) for rol in self.store]
+        return [RollContainerIO((self.store_coord_dict[M.MAX_LANE_STORE-1][1]-rol.h)/M.BUFFER_LANE_SPEED, self.lane, rol) for rol in self.store]
 
     def time_step(self):
-        move = BUFFER_LANE_SPEED * TIME_STEP_S
+        move = M.BUFFER_LANE_SPEED * TIME_STEP_S
         if self.lane_up:
             for r, rol in enumerate(self.store):
                 rol.h = min(rol.h+move, self.store_coord_dict[M.MAX_LANE_STORE-1-r][1])
@@ -110,12 +110,12 @@ class BufferLane:
         rol.o = 1 if self.lane_up else 3
         self.store.append(rol)
         if self.lane_up:
-            self.dead_time_up =-TIME_LOAD_BUFFER_LANE
+            self.dead_time_up =-M.TIME_LOAD_BUFFER_LANE
 
     def pickup_roll_container(self):
         if len(self.store)>0:
             self.n_store_reserved -= 1
             if not self.lane_up:
-                self.dead_time_down =-TIME_LOAD_BUFFER_LANE
+                self.dead_time_down =-M.TIME_LOAD_BUFFER_LANE
             return self.store.pop(0)
         print("ERROR: BufferLane.pickup_roll_container(). Store empty.\n", str(self))

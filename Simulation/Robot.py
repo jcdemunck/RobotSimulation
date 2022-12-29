@@ -3,7 +3,7 @@ import cv2 as cv
 
 
 from XdockParams import TIME_STEP_S,  \
-                        ROBOT_SPEED, ROBOT_LOAD_TIME, ROBOT_UNLOAD_TIME, W1_ROBOT, W2_ROBOT, H1_ROBOT, H2_ROBOT, \
+                        W1_ROBOT, W2_ROBOT, H1_ROBOT, H2_ROBOT, \
                         LOG_INTERVAL_ROBOT,\
                         get_orientation, get_distance_city_block, get_path_len
 from ModelParameters import ModelParams as M
@@ -110,7 +110,7 @@ class RobotTask:
                 self.finished = True
                 return
 
-            step_todo = TIME_STEP_S * ROBOT_SPEED
+            step_todo = TIME_STEP_S * M.ROBOT_SPEED
 
             p_begin   = robot.get_coords_offset(self.path[self.segment], self.offset)
             for p_end in self.path[self.segment + 1:]:
@@ -164,7 +164,7 @@ class RobotTask:
         if self.finished:
             return 0.
         if self.task_type[0:4]=="goto":
-            return M.W_FLOOR/(2*ROBOT_SPEED)
+            return M.W_FLOOR/(2*M.ROBOT_SPEED)
         if self.task_type=="wait":
             return self.wait
         return TIME_STEP_S
@@ -282,7 +282,7 @@ class Robot:
         coords2  = pos.get_coords()
         path     = floor_plan.grid_graph.get_shortest_path(coords1, coords2, get_distance_city_block)
 
-        return get_path_len(path)/ROBOT_SPEED
+        return get_path_len(path)/M.ROBOT_SPEED
 
     def get_task_list_length(self):
         return len(self.task_list)
@@ -318,14 +318,14 @@ class Robot:
         self.task_list = [RobotTask(begin=True),
                           RobotTask(wait=wait),
                           RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
-                          RobotTask(wait=ROBOT_LOAD_TIME, load_lane=pos_pickup.get_store_object(floor_plan)),
+                          RobotTask(wait=M.ROBOT_LOAD_TIME, load_lane=pos_pickup.get_store_object(floor_plan)),
                           RobotTask(find_destination=True)]
 
     def append_process_incoming(self, floor_plan, pos_pickup, prepend=False):
         # new, incomplete task (storage destination not yet known)
         new_tasks = [RobotTask(begin=True),
                      RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
-                     RobotTask(wait=ROBOT_LOAD_TIME, load_lane=pos_pickup.get_store_object(floor_plan)),
+                     RobotTask(wait=M.ROBOT_LOAD_TIME, load_lane=pos_pickup.get_store_object(floor_plan)),
                      RobotTask(find_destination=True)]
 
         n_tasks = len(self.task_list)
@@ -364,7 +364,7 @@ class Robot:
             print(self)
         pos_store = BSM.choose_and_reserve_store(floor_plan, self.rol)
         task_list = [RobotTask(floor_plan=floor_plan, goto_pos=pos_store),
-                     RobotTask(wait=ROBOT_UNLOAD_TIME, unload=pos_store.get_store_object(floor_plan)),
+                     RobotTask(wait=M.ROBOT_UNLOAD_TIME, unload=pos_store.get_store_object(floor_plan)),
                      RobotTask(begin=False)]
 
         # insert new tasks
@@ -375,9 +375,9 @@ class Robot:
 
         new_tasks = [RobotTask(begin=True),
                      RobotTask(floor_plan=floor_plan, goto_pos=pos_pickup),
-                     RobotTask(wait=ROBOT_LOAD_TIME, load_store=pos_pickup.get_store_object(floor_plan)),
+                     RobotTask(wait=M.ROBOT_LOAD_TIME, load_store=pos_pickup.get_store_object(floor_plan)),
                      RobotTask(floor_plan=floor_plan, goto_pos=pos_unload),
-                     RobotTask(wait=ROBOT_UNLOAD_TIME, unload=pos_unload.get_store_object(floor_plan)),
+                     RobotTask(wait=M.ROBOT_UNLOAD_TIME, unload=pos_unload.get_store_object(floor_plan)),
                      RobotTask(begin=False)]
 
         if len(self.task_list)==0:
